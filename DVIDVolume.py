@@ -14,7 +14,7 @@ class DVIDVolume:
         self.ns = DVIDNodeService(servername, uuid)
         self.instancename = instancename
         self.elementsize = elementsize
-        if elementsize==uint8:
+        if elementsize==self.uint8:
             self.ns.create_grayscale8(instancename, blocksize=blocksize)
         else:
             self.ns.create_labelblk(instancename, blocksize=blocksize)
@@ -33,7 +33,7 @@ class DVIDVolume:
 
         z,y,x = index
 
-        if self.elementsize == uint8:
+        if self.elementsize == self.uint8:
             data = self.ns.get_gray3D(self.instancename, (z.stop-z.start, y.stop-y.start, x.stop-x.start), (z.start, y.start, x.start))
         else:
             data = self.ns.get_labels3D(self.instancename, (z.stop-z.start, y.stop-y.start, x.stop-x.start), (z.start, y.start, x.start))
@@ -46,10 +46,10 @@ class DVIDVolume:
             raise Exception("Not 3D")
         z,y,x = index
 
-        if self.elementsize == uint8:
+        if self.elementsize == self.uint8:
             self.ns.put_gray3D(self.instancename, val, (z.start, y.start, x.start))
         else:
-            val = val.astype(uint64)
+            val = val.astype(self.uint64)
             self.ns.put_labels3D(self.instancename, val, (z.start, y.start, x.start))
         
         # ?! handle non-block align and save data as uint8 or uint64
