@@ -42,6 +42,8 @@ it is possible that parallel writes could cause inconsistency in the datastore.
 
 ## Future Work
 
+* Auto-configure google environment; add quota; inactivity timeouts
+* Allow read/write permission
 * Allow writes that are non-block aligned (though no protection for multiple writes)
 * Implement native support for 16 and 32 bit datatypes.
 * Implement a separate metadata store to allow multiple writers
