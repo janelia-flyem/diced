@@ -1,6 +1,6 @@
 # DVIDCloudStore [![Picture](https://raw.github.com/janelia-flyem/janelia-flyem.github.com/master/images/HHMI_Janelia_Color_Alternate_180x40.png)](http://www.janelia.org)
 
-** (status: not ready) **
+*(status: not ready)*
 
 This allows one to store large, versioned 3D data in the cloud.
 
@@ -12,15 +12,24 @@ This allows one to store large, versioned 3D data in the cloud.
 * Authorize Google on your machine ('gcloud auth login first')
 
 ### Access DVID Volumes
-* run 'setup_dvidcloud <project name> <bucket name> <num dvid instances>' (limit 8 instances)
+
+
+
+* run 'setup_dvidcloud |project name| |bucket name| |num dvid instances|' (limit 8 instances)
 * navigate to the http://IPADDR:8080/#/?admin=1; create a repo if desired
-* in python
+* access datasets in python (see example below)
+* to commit a node or branch, use the web interface and append 'admin=1' to the URL to have these options to version the data (once data is locked that version can no longer be modified)
+* to stop the dvidcloud service call 'destroy_dvidcloud'
+
+#### Python Example
+
     % from DVIDVolume import DVIDVolume
     % vol = DVIDVolume("IPADDR:8080", "UUID", "dataname", DVIDVolume.uint8|DVIDVolume.uint16|DVIDVolume.uint32|DVIDVolume.uint64)
     % vol[z0:z1, y0:y1, x0:x1] = numpydata
     % numpydata = vol[z0:z1, y0:y1, x0:x1]
-* to commit a node or branch, use the web interface and append 'admin=1' to the URL to have these options to version the data (once data is locked that version can no longer be modified)
-* to stop the dvidcloud service call 'destroy_dvidcloud'
+  
+
+
 
 ## Current limitations
 
