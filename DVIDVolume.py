@@ -2,15 +2,13 @@
 # ?! class for instance (takes node service info)
 
 import numpy
-uint8 = numpy.uint8
-uint16 = numpy.uint16
-uint32 = numpy.uint32
-uint64 = numpy.uint64
-
-import numpy
 from libdvid import DVIDNodeService
 
 class DVIDVolume:
+    uint8 = numpy.uint8
+    uint16 = numpy.uint16
+    uint32 = numpy.uint32
+    uint64 = numpy.uint64
     def __init__(self, servername, uuid, instancename, elementsize=uint8, blocksize=64):
         # ?! will create instance if not available -- maybe make find only and have a seperate factory method to create then you connect pre-existing
         self.ns = DVIDNodeService(servername, uuid)

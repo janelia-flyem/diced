@@ -34,5 +34,5 @@ gcloud compute http-health-checks create basic-check
 gcloud compute target-pools create www-pool --region us-central1 --health-check basic-check
 gcloud compute target-pools add-instances www-pool --instances ${instancescomma} --zone us-central1-b
 addr=`gcloud compute addresses list | grep dvid | awk '{print $3}'`
-#gcloud compute forwarding-rules create www-rule --region us-central1 --port 8080 --address ${addr} --target-pool www-pool
+gcloud compute forwarding-rules create www-rule --region us-central1 --port 8080 --address ${addr} --target-pool www-pool
 echo "Address" $addr
