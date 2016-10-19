@@ -1,0 +1,38 @@
+# need project name
+# need bucket name
+
+#<prog> <project name> <dvid bucket name> <num dvid instances>
+
+# run gcloud auth login first
+
+# ?! work without default network
+# ?! permissions -- could read source IP and configure access to port a just for that ip
+
+# set active project
+gcloud config set project ${1}
+
+# ?! no check if bucket is exists or whether user has permission
+gsutil mb -p dvid-em gs://${2}
+
+# ?! allow dynamic dvid backend resizing
+# make multiple 4-core instances
+for ((i=0; i<$3; i++)); do
+    instances+="dviddocker${i} "
+    if [ "$i" == "$(($3-1))" ]; then
+        instancescomma+="dviddocker${i}"
+    else
+        instancescomma+="dviddocker${i},"
+    fi
+done
+
+gcloud compute instances create ${instances} --image container-vm --zone us-central1-b --machine-type n1-standard-4  --maintenance-policy "MIGRATE" --scopes default="https://www.googleapis.com/auth/cloud-platform" --tags "http-server","https-server" --metadata "startup-script=docker pull flyem/dvid; docker run -p 8080:8000 flyem/dvid dvidtest" --tags dvid-lb
+
+gcloud compute firewall-rules create www-firewall --target-tags dvid-lb --allow tcp:8080
+
+gcloud compute addresses create dvid-lb-ip-1 --region us-central1
+gcloud compute http-health-checks create basic-check
+gcloud compute target-pools create www-pool --region us-central1 --health-check basic-check
+gcloud compute target-pools add-instances www-pool --instances ${instancescomma} --zone us-central1-b
+addr=`gcloud compute addresses list | grep dvid | awk '{print $3}'`
+#gcloud compute forwarding-rules create www-rule --region us-central1 --port 8080 --address ${addr} --target-pool www-pool
+echo "Address" $addr

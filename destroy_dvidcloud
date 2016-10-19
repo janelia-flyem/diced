@@ -1,0 +1,12 @@
+# ?! look at open instances to delete
+for ((i=0; i<=8; i++)); do
+   instances+="dviddocker${i} "
+done
+
+gcloud compute instances delete ${instances} --zone us-central1-b -q
+
+gcloud compute addresses delete dvid-lb-ip-1 --region us-central1 -q
+gcloud compute forwarding-rules delete www-rule --region us-central1 -q
+gcloud compute target-pools delete www-pool --region us-central1 -q
+
+
