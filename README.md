@@ -46,3 +46,5 @@ it is possible that parallel writes could cause inconsistency in the datastore.
 * Implement native support for 16 and 32 bit datatypes.
 * Implement a separate metadata store to allow multiple writers
 * Improve speed of data fetching by maintaining a seperate key store
+* Convert launch scripts to python and add configuration files
+* Allow auto load balancing (with min/max requirements)
