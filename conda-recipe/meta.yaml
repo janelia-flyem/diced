@@ -1,0 +1,29 @@
+package:
+  name: dvidcloudstore
+
+source:
+  git_url: ../
+  git_tag: HEAD
+
+build:
+  number: 0
+  
+requirements:
+  build:
+    - python 2.7*
+    - setuptools
+  run:
+    - python 2.7*  
+    - numpy
+    - libdvid-cpp >=0.2
+    - requests
+
+test:
+  imports:
+    - DVIDCloudStore 
+
+about:
+  home: http://github.com/janelia-flyem/DVIDCloudStore
+  license: BSD (3-clause)
+  license_file: LICENSE.txt
+  summary: API to enable access to large-scale nD data volumes locally or on the cloud 
