@@ -1,5 +1,6 @@
 package:
-  name: dvidcloudstore
+  name: diced
+  version: "0.1"
 
 source:
   git_url: ../
@@ -18,12 +19,12 @@ requirements:
     - libdvid-cpp >=0.2
     - requests
 
-test:
-  imports:
-    - DVIDCloudStore 
+#test:
+#  imports:
+#    - DVIDCloudStore 
 
 about:
-  home: http://github.com/janelia-flyem/DVIDCloudStore
+  home: http://github.com/janelia-flyem/diced
   license: BSD (3-clause)
   license_file: LICENSE.txt
   summary: API to enable access to large-scale nD data volumes locally or on the cloud 
