@@ -10,14 +10,16 @@ import subprocess
 import os
 import tempfile
 
-class DicedException(Exception):
-    pass
+from DicedRepo import DicedRepo
+from DicedException import DicedException
+
 
 class DicedStore(object):
     """Setup and destroy DVID connection or point to pre-existing DVID server.
 
     TODO:
-        Support deletion of created repos.
+        Support deletion of created repos.  Support custom launch options, such
+        as using groupcache, read-only.
     """
 
     # constants to configure DVID toml files
@@ -164,7 +166,6 @@ max_log_age = 30   # days
         try:
             DVIDServerService(self._server)
         except DVIDException, err:
-            print err
             raise DicedException("DVID connection failed")
 
 
@@ -194,7 +195,37 @@ max_log_age = 30   # days
             name (str): name of DVID respository (must be unique)
             description (str): description of repository
         """
+        try:
+            curr_repos = self.list_repos()
+            for (reponame, uuid) in curr_repos:
+                if reponame == name:
+                    raise DicedException("Repo name already exists")
+            service = DVIDServerService(_server)
+            uuid = service.create_new_repo(name, description)
+        except DVIDException, err:
+            raise DicedException("Failed to create repo")
 
+    def delete_repo(self, name):
+        """Delete entire repo -- this cannot be undone!
+
+        Note:
+            For large repos this could be very time-consuming.
+            While this is non-blocking, currently, DVID
+            will not resume the deletion on restart, so it is
+            possible for data to still be stored even if it
+            is superficially removed.  For now, the user should
+            ensure DicedStore is open for a some time after
+            issue the command.
+
+        TODO:
+            Implement a restartable background delete.
+
+        """
+
+        uuid = self.get_repouuid(name)
+
+        deletecall = subprocess.Popen(['dvid', 'repos', 'delete', uuid], stdout=None)
+        deletecall.communicate()
 
     def list_repos(self):
         """List all repositories in the store.
@@ -202,18 +233,62 @@ max_log_age = 30   # days
         Returns:
             A list of (name, uuid) tuples
         """
+        
+        data = None 
+        try:
+            conn = DVIDConnection(_server) 
+            data = conn.make_request("/repos/info", ConnectionMethod.GET)
+        except DVIDException, err:
+            raise DicedException("Failed to access /repos/info on DVID")
+        
+        jdata = json.loads(data) 
+        res = []
+        for key, val in jdata:
+            res.append((val["Alias"], val["Root"]))
 
-    def open_repo(self, name, uuid=None):
+        return res
+
+    def get_repouuid(self, name):
+        """Return a repo UUID given the name.
+
+        The root node is taken by default.
+
+        Returns:
+            A string representing the UUID.
+
+        Raises:
+            Raised DicedException if repo does not exist.
+        """
+        repos = self.list_repos()
+        for (tname, repoid) in repos:
+            if tname == name:
+                return repoid
+        raise DicedException("repo name does not exist")
+
+    def open_repo(self, name=None, uuid=None):
         """Open repository of the specified name (or by unique identifier).
+
+        If only the name is specified, the root node is taken by default.
 
         Args:
             name (str): name of repository to open
             uuid (str): unique identifier for repository
         
         Returns:
-            A repository object or None if nothing found.
+            A repository object if it exists.
+
+        Exception:
+            Raises a DicedException if repo does not exist.
         """
 
-
-
+        if uuid is not None:
+            try:
+                ns = DVIDNodeService(_server, uuid)
+                return DicedRepo(_server, uuid, self)
+            except DVIDException:
+                # repo does not exist
+                raise DicedException("uuid does not exist")
+        elif name is not None:
+            repoid = self.get_repouuid(name)
+            return DicedRepo(_server, repoid, self)
 
