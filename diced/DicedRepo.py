@@ -115,7 +115,7 @@ class DicedRepo(object):
             # check if accepted type
             typename = self.activeInstances[name]
             if typename in SupportedTypes: # only support arrays
-                islabel = typename in LabelTypes
+                islabel3D = typename in LabelTypes
                 numdims = 3
 
                 # check if num dims and user dtype specified
@@ -126,24 +126,24 @@ class DicedRepo(object):
                 except:
                     pass
 
-                return DicedArray(self.dicedstore, self.locked, self.nodeconn, 
-                    self.currentnode, numdims, dtype, islabel)
+                return DicedArray(name, self.dicedstore, self.locked, self.nodeconn, 
+                    self.currentnode, numdims, dtype, islabel3D)
             else:
                 raise DicedException("Instance name: " + name + " has an unsupported type " + typename)
         
         raise DicedException("Instance name: " + name + " not found in version " + self.uuid)
 
 
-    def create_array(name, dtype, dims=3, islabels=False, lossycompression=False, versioned=True) 
+    def create_array(name, dtype, dims=3, islabel3D=False, lossycompression=False, versioned=True) 
         """Create a new array in the repo at this version.
 
         Args:
             name (str): unique name for this array
-            dtype (ArrayDtype): datatype
+            dtype (ArrayDtype): datatype (not relevant if labels)
             dims (int): number of dimensions (support 1,2,3)
-            islabels (bool): treat as label data (usually highly compressible)
+            islabel3D (bool): treat as label data (usually highly compressible) (always 64bit)
             versioned (bool): allow array to be versioned
-            lossycompresion (bool): use lossy compression (only if not islabels)
+            lossycompresion (bool): use lossy compression (only if not islabel3D)
 
         Returns:
             new DicedArray object
@@ -159,13 +159,19 @@ class DicedRepo(object):
             if tname == name:
                 raise DicedException("Name already exists in repo")
 
+        if islabel3D and dims != 3:
+            raise DicedException("islabel3D only supported for 3D data")
+        
+        if islabel3D and dtype != ArrayDtype.uint8:
+            raise DicedException("islabel3D only works with 64 bit data")
+
         conn = DVIDConnection(dvid_server) 
 
         endpoint = "/repo/" + self.uuid + "/instance"
         blockstr = "%d,%d,%d" % (blocksize[2], blocksize[1], blocksize[0])
         
         typename = RawTypeMappings[dtype]
-        if islabels:
+        if islabel3D:
             typename = LabelTypeMappings[dtype]
 
         # handle blocksize
@@ -189,8 +195,8 @@ class DicedRepo(object):
         # update current node meta 
         self._init_version(self.uuid)
 
-        return DicedArray(self.dicedstore, False, self.nodeconn, 
-            self.currentnode, dims, dtype, islabel)
+        return DicedArray(name, self.dicedstore, False, self.nodeconn, 
+            self.currentnode, dims, dtype, islabel3D)
 
     def upload_filedata(self, dataname, data):
         """Upload file data to this repo version.
