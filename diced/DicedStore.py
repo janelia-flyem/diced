@@ -9,6 +9,7 @@ from libdvid._dvid_python import DVIDException
 import subprocess
 import os
 import tempfile
+import json
 
 from DicedRepo import DicedRepo
 from DicedException import DicedException
@@ -100,6 +101,7 @@ max_log_age = 30   # days
     
         self._dvidproc = None
         self._server = None
+        self.rpcport = rpcport
 
         # if gs or local launch DVID
         gbucket = location.startswith("gs://")
@@ -150,8 +152,9 @@ max_log_age = 30   # days
             if permissionfile is not None:
                 local_env["GOOGLE_APPLICATION_CREDENTIALS"] = permissionfile 
 
-            self._dvidproc = subprocess.Popen(['dvid', 'serve', tomllocation],
-                    env=local_env, stdout=None) 
+            with open(os.devnull, 'w') as devnull:
+                self._dvidproc = subprocess.Popen(['dvid', 'serve', tomllocation],
+                    env=local_env, stdout=devnull) 
         else:
             self._server = location + ":" + str(port)
             
@@ -159,7 +162,7 @@ max_log_age = 30   # days
         # allow a few seconds for DVID to launch
         if self._dvidproc is not None:
             import time
-            print "Establishing connection..."
+            #print "Establishing connection..."
 
             # poll server every second
             while True:
@@ -233,7 +236,11 @@ max_log_age = 30   # days
 
         uuid = self.get_repouuid(name)
 
-        deletecall = subprocess.Popen(['dvid', 'repos', 'delete', uuid], stdout=None)
+        addr = self._server.split(':')[0]
+        rpcaddress = addr + ":" + str(self.rpcport)
+
+        deletecall = subprocess.Popen(['dvid', '-rpc='+rpcaddress, 
+            'repos', 'delete', uuid], stdout=None)
         deletecall.communicate()
 
     def list_repos(self):
@@ -246,14 +253,14 @@ max_log_age = 30   # days
         data = None 
         try:
             conn = DVIDConnection(self._server) 
-            data = conn.make_request("/repos/info", ConnectionMethod.GET)
+            code, data, errmsg = conn.make_request("/repos/info", ConnectionMethod.GET)
         except DVIDException, err:
             raise DicedException("Failed to access /repos/info on DVID")
-        
+      
         jdata = json.loads(data) 
         res = []
-        for key, val in jdata:
-            res.append((val["Alias"], val["Root"]))
+        for key, val in jdata.items():
+            res.append((str(val["Alias"]), str(val["Root"])))
 
         return res
 

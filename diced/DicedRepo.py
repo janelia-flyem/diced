@@ -5,6 +5,7 @@ import numpy as np
 from libdvid import DVIDNodeService, ConnectionMethod, DVIDConnection
 from libdvid._dvid_python import DVIDException
 from enum import Enum
+import json
 
 class ArrayDtype(Enum):
     """Defines datatypes supported.
@@ -47,12 +48,17 @@ class DicedRepo(object):
 
     def __init__(self, server, uuid, dicedstore):
         self.server = server
+        
+        # create connection object to DVID
+        self.rawconn = DVIDConnection(server) 
+        
         # hold reference
         self.dicedstore = dicedstore
+
         self.uuid = None
-        # DVID connections
+        
+        # DVID version node connection
         self.nodeconn = None
-        self.rawconn = None
 
         # all instances to ignore for ls
         self.hidden_instances = None
@@ -73,10 +79,10 @@ class DicedRepo(object):
         self._init_version(uuid)
 
         # create meta types if not currently available
-        if MetaLocation not in self.activeinstances:
-            self.nodeconn.create_keyvalue(MetaLocation)
-        if FileLocation not in self.activeinstances:
-            self.nodeconn.create_keyvalue(FileLocation)
+        if self.MetaLocation not in self.activeinstances:
+            self.nodeconn.create_keyvalue(self.MetaLocation)
+        if self.FilesLocation not in self.activeinstances:
+            self.nodeconn.create_keyvalue(self.FilesLocation)
 
 
     def change_version(self, uuid):
@@ -122,14 +128,14 @@ class DicedRepo(object):
 
                 # check if num dims and user dtype specified
                 try:
-                    rootuuid = self.currentnode["DataInstances"][name]["Base"]["DataUUID"]
-                    data = self.nodeconn.get_json(MetaLocation, self.InstanceMetaPrefix+name+":"+rootuuid) 
+                    rootuuid = self.current_node["DataInstances"][name]["Base"]["DataUUID"]
+                    data = self.nodeconn.get_json(self.MetaLocation, self.InstanceMetaPrefix+name+":"+rootuuid) 
                     numdims = data["numdims"]
                 except:
                     pass
 
                 return DicedArray(name, self.dicedstore, self.locked, self.nodeconn, 
-                    self.currentnode, numdims, dtype, islabel3D)
+                    self.current_node, numdims, dtype, islabel3D)
             else:
                 raise DicedException("Instance name: " + name + " has an unsupported type " + typename)
         
@@ -167,8 +173,6 @@ class DicedRepo(object):
         if islabel3D and dtype != ArrayDtype.uint8:
             raise DicedException("islabel3D only works with 64 bit data")
 
-        conn = DVIDConnection(dvid_server) 
-
         endpoint = "/repo/" + self.uuid + "/instance"
         blockstr = "%d,%d,%d" % (blocksize[2], blocksize[1], blocksize[0])
         
@@ -188,17 +192,17 @@ class DicedRepo(object):
         if not islabels3D and lossycompression:
             data["Compression"] = "jpeg"
 
-        conn.make_request(endpoint, ConnectionMethod.POST, json.dumps(data))
+        self.rawconn.make_request(endpoint, ConnectionMethod.POST, json.dumps(data))
 
         # use '.meta' keyvalue to store array size (since not internal to DVID yet) 
 
-        self.nodeconn.put(MetaLocation, InstanceMetaPrefix+name+":"+self.uuid, json.dumps({"numdims": dims}))
+        self.nodeconn.put(self.MetaLocation, self.InstanceMetaPrefix+name+":"+self.uuid, json.dumps({"numdims": dims}))
 
         # update current node meta 
         self._init_version(self.uuid)
 
         return DicedArray(name, self.dicedstore, False, self.nodeconn, 
-            self.currentnode, dims, dtype, islabel3D)
+            self.current_node, dims, dtype, islabel3D)
 
     def upload_filedata(self, dataname, data):
         """Upload file data to this repo version.
@@ -208,7 +212,7 @@ class DicedRepo(object):
             data (str): data to store
         """
 
-        self.nodeconn.put(FileLocation, dataname, data)
+        self.nodeconn.put(self.FilesLocation, dataname, data)
 
 
     def download_filedata(self, dataname):
@@ -261,7 +265,7 @@ class DicedRepo(object):
             List of strings for file names
         """
 
-        return self.nodeconn.custom_request("/" + FileLocation + "/keys/0/z",
+        return self.nodeconn.custom_request("/" + self.FilesLocation + "/keys/0/z",
             ConnectionMethod.GET)
 
     def create_branch(self, message):
@@ -340,12 +344,16 @@ class DicedRepo(object):
 
         """
 
-        deletecall = subprocess.Popen(['dvid', 'repo', self.uuid, 'delete', dataname], stdout=None)
+        deletecall = subprocess.Popen(['dvid', '-rpc='+str(self.dicedstore.rpcport), 'repo', self.uuid, 'delete', dataname], stdout=None)
         deletecall.communicate()
 
     def _init_version(self, uuid):
+        # create connection to repo
+        self.nodeconn = DVIDNodeService(str(self.server), str(uuid))
+        
         # fetch all repo information
-        self.repoinfo = json.loads(conn.make_request("/repo/" + uuid + "/info", ConnectionMethod.GET))
+        status, data, errmsg = self.rawconn.make_request("/repo/" + uuid + "/info", ConnectionMethod.GET)
+        self.repoinfo = json.loads(data)
         self.allinstances = {}
         # load all versions in repo
         self.alluuids = set()
@@ -357,18 +365,18 @@ class DicedRepo(object):
             # name is not necessarily unique to a repo
             self.allinstances[(instancename, val["Base"]["DataUUID"])] = val["Base"]["TypeName"]
         
-        # create connection to repo
-        self.nodeconn = DVIDNodeService((str(server), str(uuid)))
-        self.rawconn = DVIDConnection(server) 
 
         # datainstances that should be hidden (array of names) 
-        self.hidden_instances = set(self.nodeconn.getjson(MetaLocation, RestrictionName))
+        try:
+            self.hidden_instances = set(self.nodeconn.get_json(self.MetaLocation, self.RestrictionName))
+        except:
+            self.hidden_instances = set()
         
         nodeids = {}
         # check if locked note
         dag = self.repoinfo["DAG"]["Nodes"]
         for tuuid, nodedata in dag.items():
-            nodeids[nodedata["VersionId"]] = nodedata
+            nodeids[nodedata["VersionID"]] = nodedata
             if tuuid.startswith(uuid):
                 self.uuid = str(tuuid)
                 self.current_node = nodedata
@@ -376,11 +384,11 @@ class DicedRepo(object):
            
         # load all ancestors
         ancestors = set()
-        currnode = self.currentnode
+        currnode = self.current_node
         while True:
             ancestors.add(currnode["UUID"])
-            if len(self.currentnode["Parents"]) > 0:
-                currnode = nodeids[self.currentnode["Parents"][0]] 
+            if len(self.current_node["Parents"]) > 0:
+                currnode = nodeids[self.current_node["Parents"][0]] 
             else:
                 break
 
