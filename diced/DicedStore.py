@@ -151,6 +151,16 @@ max_log_age = 30   # days
             local_env = os.environ.copy()
             if permissionfile is not None:
                 local_env["GOOGLE_APPLICATION_CREDENTIALS"] = permissionfile 
+                    
+            # check dvid does not already exist
+            dvidexists = False 
+            try:
+                DVIDServerService(self._server)
+                dvidexists = True
+            except:
+                pass
+            if dvidexists:
+                raise DicedException("DVID already exists")
 
             with open(os.devnull, 'w') as devnull:
                 self._dvidproc = subprocess.Popen(['dvid', 'serve', tomllocation],
@@ -167,8 +177,12 @@ max_log_age = 30   # days
             # poll server every second
             while True:
                 try:
-                    conn = DVIDConnection(self._server) 
-                    data = conn.make_request("/server/info", ConnectionMethod.GET)
+                    retval = self._dvidproc.poll()
+                    # early termination (checking DVID later will fail)
+                    if retval is not None:
+                        break
+
+                    DVIDServerService(self._server)
                     break
                 except:
                     time.sleep(1) # wait for connection
