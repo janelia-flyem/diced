@@ -4,6 +4,7 @@
 import numpy as np
 from libdvid import DVIDNodeService, ConnectionMethod, DVIDConnection
 from libdvid._dvid_python import DVIDException
+from enum import Enum
 
 class ArrayDtype(Enum):
     """Defines datatypes supported.
@@ -28,12 +29,13 @@ class DicedRepo(object):
     BLKSIZE1D = 262144
    
     # keep track of all internal DVID datatypes supported
-    SupportedTypes = dict {"uint8blk" : dtype.uint8, "uint16blk": dtype.uint16,
-            "uint32blk": dype.uint32, "uint64blk": dtype.uint64, "labelblk": dtype.uint64}
-    RawTypeMappings = dict {dtype.uint8: "uint8blk", dtype.uint16: "uint16blk",
-                        dtype.uint32: "uint32blk", dtype.uint64: "uint64blk"} 
-    LabelTypeMappings = dict {dtype.uint8: "labelblk", dtype.uint16: "labelblk",
-                        dtype.uint32: "labelblk", dtype.uint64: "labelblk"} 
+    SupportedTypes = {"uint8blk" : ArrayDtype.uint8, "uint16blk": ArrayDtype.uint16,
+            "uint32blk": ArrayDtype.uint32, "uint64blk": ArrayDtype.uint64,
+            "labelblk": ArrayDtype.uint64}
+    RawTypeMappings = {ArrayDtype.uint8: "uint8blk", ArrayDtype.uint16: "uint16blk",
+                        ArrayDtype.uint32: "uint32blk", ArrayDtype.uint64: "uint64blk"} 
+    LabelTypeMappings = {ArrayDtype.uint8: "labelblk", ArrayDtype.uint16: "labelblk",
+                        ArrayDtype.uint32: "labelblk", ArrayDtype.uint64: "labelblk"} 
 
     
     LabelTypes = set(["labelblk"])
@@ -134,7 +136,7 @@ class DicedRepo(object):
         raise DicedException("Instance name: " + name + " not found in version " + self.uuid)
 
 
-    def create_array(name, dtype, dims=3, islabel3D=False, lossycompression=False, versioned=True) 
+    def create_array(name, dtype, dims=3, islabel3D=False, lossycompression=False, versioned=True): 
         """Create a new array in the repo at this version.
 
         Args:
@@ -176,21 +178,21 @@ class DicedRepo(object):
 
         # handle blocksize
         blockstr = str(BLKSIZED3D) + "," + str(BLKSIZED3D) + "," + str(BLKSIZED3D)
-        if dims = 2:
+        if dims == 2:
             blockstr = str(BLKSIZED2D) + "," + str(BLKSIZED2D) + "," + str(1)
-        if dims = 1:
+        if dims == 1:
             blockstr = str(BLKSIZED1D) + "," + str(1) + "," + str(1)
 
         data = {"typename": typename, "dataname": name, "BlockSize": blockstr}
         
-        if not is labels and lossycompression:
+        if not islabels3D and lossycompression:
             data["Compression"] = "jpeg"
 
         conn.make_request(endpoint, ConnectionMethod.POST, json.dumps(data))
 
         # use '.meta' keyvalue to store array size (since not internal to DVID yet) 
 
-        self.nodeconn.put(MetaLocation, InstanceMetaPrefix+name+":"+self.uuid, json.dumps({"numdims": dims})
+        self.nodeconn.put(MetaLocation, InstanceMetaPrefix+name+":"+self.uuid, json.dumps({"numdims": dims}))
 
         # update current node meta 
         self._init_version(self.uuid)
@@ -288,7 +290,7 @@ class DicedRepo(object):
         
 
     def lock_node(self, message):
-         """Lock node.
+        """Lock node.
 
         Args:
             message (str): commit message
@@ -353,7 +355,7 @@ class DicedRepo(object):
         
         for instancename, val in self.repoinfo["DataInstances"].items():
             # name is not necessarily unique to a repo
-            self.allinstances[(instancename, val["Base"][["DataUUID"])] = val["Base"]["TypeName"]
+            self.allinstances[(instancename, val["Base"]["DataUUID"])] = val["Base"]["TypeName"]
         
         # create connection to repo
         self.nodeconn = DVIDNodeService((str(server), str(uuid)))
@@ -386,6 +388,6 @@ class DicedRepo(object):
         self.activeinstances = {}
 
         for instancename, val in self.repoinfo["DataInstances"].items():
-            if val["Base"][["DataUUID"] in ancestors:
+            if val["Base"]["DataUUID"] in ancestors:
                 self.activeinstances[instancename] = val["Base"]["TypeName"]
 

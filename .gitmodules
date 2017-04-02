@@ -1,0 +1,3 @@
+[submodule "diced/dvid-console"]
+	path = diced/dvid-console
+	url = https://github.com/janelia-flyem/dvid-console.git

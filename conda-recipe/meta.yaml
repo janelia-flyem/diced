@@ -7,7 +7,7 @@ source:
   git_tag: HEAD
 
 build:
-  number: 0
+  number: 1
   
 requirements:
   build:
@@ -16,6 +16,7 @@ requirements:
   run:
     - python 2.7*  
     - numpy
+    - dvid
     - libdvid-cpp >=0.2
     - requests
 

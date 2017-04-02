@@ -1,1 +1,1 @@
-recursive-include dvid-console *
+recursive-include diced/dvid-console/dist *

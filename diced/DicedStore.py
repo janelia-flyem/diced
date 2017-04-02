@@ -91,7 +91,7 @@ max_log_age = 30   # days
             port (integer): port that DVID will take http requests
             port (integer): port that DVID will take rpc requests
             permissionfile (str): permission json file location for gbucket
-            appdir (str): directory that contains application information
+            appdir (str): directory that contains diced logs and other data
         
         Exceptons:
             Will raise DicedException if DVID server cannot be created or
@@ -105,9 +105,9 @@ max_log_age = 30   # days
         gbucket = location.startswith("gs://")
         fileloc = not location.startswith("dvid://") and not gbucket
         if gbucket or fileloc:
-            # appdir is '~/.dvidcloudstore' by default
+            # appdir is '~/.dicedstore' by default
             if appdir is None:
-                appdir = '~/.dvidcloudstore'
+                appdir = '~/.dicedstore'
             appdir = os.path.expanduser(appdir)
             if not os.path.exists(appdir):
                 os.makedirs(appdir)
@@ -133,7 +133,7 @@ max_log_age = 30   # days
                 tomldata = self.LEVELDB_TOML
                 tomldata = tomldata.replace(self.DBPATH, location)
 
-            tomldata = tomldata.replace(self.WEBCLIENT, consolepath)
+            tomldata = tomldata.replace(self.WEBCLIENT, consolepath + "/dist/")
             tomldata = tomldata.replace(self.LOGNAME, logname)
             tomldata = tomldata.replace(self.RPCPORT, str(rpcport))
             tomldata = tomldata.replace(self.PORT, str(port))
@@ -160,8 +160,17 @@ max_log_age = 30   # days
         if self._dvidproc is not None:
             import time
             print "Establishing connection..."
-            time.sleep(10) # wait for connection
-        
+
+            # poll server every second
+            while True:
+                try:
+                    conn = DVIDConnection(self._server) 
+                    data = conn.make_request("/server/info", ConnectionMethod.GET)
+                    break
+                except:
+                    time.sleep(1) # wait for connection
+                
+
         # check that dvid server is accepting connections
         try:
             DVIDServerService(self._server)
@@ -200,7 +209,7 @@ max_log_age = 30   # days
             for (reponame, uuid) in curr_repos:
                 if reponame == name:
                     raise DicedException("Repo name already exists")
-            service = DVIDServerService(_server)
+            service = DVIDServerService(self._server)
             uuid = service.create_new_repo(name, description)
         except DVIDException, err:
             raise DicedException("Failed to create repo")
@@ -236,7 +245,7 @@ max_log_age = 30   # days
         
         data = None 
         try:
-            conn = DVIDConnection(_server) 
+            conn = DVIDConnection(self._server) 
             data = conn.make_request("/repos/info", ConnectionMethod.GET)
         except DVIDException, err:
             raise DicedException("Failed to access /repos/info on DVID")
@@ -283,12 +292,12 @@ max_log_age = 30   # days
 
         if uuid is not None:
             try:
-                ns = DVIDNodeService(_server, uuid)
-                return DicedRepo(_server, uuid, self)
+                ns = DVIDNodeService(self._server, uuid)
+                return DicedRepo(self._server, uuid, self)
             except DVIDException:
                 # repo does not exist
                 raise DicedException("uuid does not exist")
         elif name is not None:
             repoid = self.get_repouuid(name)
-            return DicedRepo(_server, repoid, self)
+            return DicedRepo(self._server, repoid, self)
 

@@ -90,13 +90,13 @@ class DicedArray(object):
         
         # interface is the same for labels and raw arrays but the function is stateless
         # and can benefit from extra compression possible in labels in some use cases
-        if self.dtype = ArrayDtype.uint8:
+        if self.dtype == ArrayDtype.uint8:
             data = self.ns.get_array8bit(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabels3D)
-        elif self.dtype = ArrayDtype.uint16:
+        elif self.dtype == ArrayDtype.uint16:
             data = self.ns.get_array16bit(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabels3D)
-        elif self.dtype = ArrayDtype.uint32:
+        elif self.dtype == ArrayDtype.uint32:
             data = self.ns.get_array32bit(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabels3D)
-        elif self.dtype = ArrayDtype.uint64:
+        elif self.dtype == ArrayDtype.uint64:
             data = self.ns.get_array64bit(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabels3D)
         else:
             raise DicedException("Invalid datatype for array")
@@ -209,13 +209,13 @@ class DicedArray(object):
 
         # interface is the same for labels and raw arrays but the function is stateless
         # and can benefit from extra compression possible in labels in some use cases
-        if self.dtype = ArrayDtype.uint8:
+        if self.dtype == ArrayDtype.uint8:
             data = self.ns.put_array8bit(self.instancename, data, (z, y, x), self.islabels3D)
-        elif self.dtype = ArrayDtype.uint16:
+        elif self.dtype == ArrayDtype.uint16:
             data = self.ns.put_array16bit(self.instancename, data, (z, y, x), self.islabels3D)
-        elif self.dtype = ArrayDtype.uint32:
+        elif self.dtype == ArrayDtype.uint32:
             data = self.ns.put_array32bit(self.instancename, data, (z, y, x), self.islabels3D)
-        elif self.dtype = ArrayDtype.uint64:
+        elif self.dtype == ArrayDtype.uint64:
             data = self.ns.put_array64bit(self.instancename, data, (z, y, x), self.islabels3D)
         else:
             raise DicedException("Invalid datatype for array")
@@ -279,9 +279,6 @@ class DicedArray(object):
                                 val[ziter:ziter+csizez, yiter:yiter+csizey, xiter:xiter+csizex].copy())
         else:
             self._setchunk(zstart, ystart, xstart, val)
-
-
-
 
         return
 
