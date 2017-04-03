@@ -88,7 +88,7 @@ max_log_age = 30   # days
             Default DVID ports or specified ports must be available to the program.
 
         Args:
-            location (str): location of DVID server
+            location (str): location of DVID server or DB
             port (integer): port that DVID will take http requests
             port (integer): port that DVID will take rpc requests
             permissionfile (str): permission json file location for gbucket
@@ -166,7 +166,7 @@ max_log_age = 30   # days
                 self._dvidproc = subprocess.Popen(['dvid', 'serve', tomllocation],
                     env=local_env, stdout=devnull) 
         else:
-            self._server = location + ":" + str(port)
+            self._server = location.split("dvid://")[1] + ":" + str(port)
             
 
         # allow a few seconds for DVID to launch
@@ -180,6 +180,7 @@ max_log_age = 30   # days
                     retval = self._dvidproc.poll()
                     # early termination (checking DVID later will fail)
                     if retval is not None:
+                        self._dvidproc = None
                         break
 
                     DVIDServerService(self._server)
@@ -206,6 +207,25 @@ max_log_age = 30   # days
 
         if self._dvidproc is not None:
             self._dvidproc.terminate()
+
+
+    def _shutdown_store(self):
+        """Stops the connection to DVID thereby freeing port.
+
+        This does not need to be called by user in general
+        as the garbage collector will automatically free
+        up the resource when no longer in use.
+        """
+        
+        if self._dvidproc is not None:
+            import time
+            self._dvidproc.terminate()
+            while True:
+                retval = self._dvidproc.poll()
+                if retval is not None:
+                    self._dvidproc = None
+                    break
+                time.sleep(1)
 
     def create_repo(self, name, description=""):
         """Create repo.

@@ -33,7 +33,14 @@ class TestDicedStore(unittest.TestCase):
             # catch error for double creation
             caughterror = True
         self.assertTrue(caughterror)
-        
+       
+        # use previous address
+        reusestore = DicedStore("dvid://127.0.0.1", port=8000, 
+                rpcport=8001)
+        self.assertEqual(reusestore._server, "127.0.0.1:8000")
+
+
+
         # run a second dvid server
         dbdir2 = tempfile.mkdtemp()
         defstore2 = None 
@@ -48,14 +55,13 @@ class TestDicedStore(unittest.TestCase):
         # dvid address
         self.assertEqual(defstore2._server, "127.0.0.1:9000")      
         
+        # shutdown DVID 
+        defstore._shutdown_store()
+        defstore2._shutdown_store()
+        
         # cleanup dirs
         shutil.rmtree(dbdir)
         shutil.rmtree(dbdir2)
-
-        # shutdown dice by derefs
-        defstore = None
-        defstore2 = None
-        time.sleep(1)
 
     def test_repos(self):
         """Test the creation, deletion, and querying of repos.
@@ -100,8 +106,8 @@ class TestDicedStore(unittest.TestCase):
         # retrieve DicedRepo object
         repo = store.open_repo("myrepo1") 
 
+        store._shutdown_store()
         shutil.rmtree(dbdir)
-
 
 if __name__ == "main":
     unittest.main()

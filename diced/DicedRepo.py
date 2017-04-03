@@ -2,10 +2,12 @@
 """
 
 import numpy as np
-from libdvid import DVIDNodeService, ConnectionMethod, DVIDConnection
-from libdvid._dvid_python import DVIDException
 from enum import Enum
 import json
+
+from libdvid import DVIDNodeService, ConnectionMethod, DVIDConnection
+from libdvid._dvid_python import DVIDException
+from DicedException import DicedException
 
 class ArrayDtype(Enum):
     """Defines datatypes supported.
@@ -84,7 +86,6 @@ class DicedRepo(object):
         if self.FilesLocation not in self.activeinstances:
             self.nodeconn.create_keyvalue(self.FilesLocation)
 
-
     def change_version(self, uuid):
         """Change the current node version.
 
@@ -95,12 +96,13 @@ class DicedRepo(object):
             DicedException if UUID not found
         """
         
-        for tuuid in self.alluids:
+        for tuuid in self.alluuids:
             if tuuid.startswith(uuid):
                 self._init_version(uuid) 
+                return
         raise DicedException("UUID not found")
 
-    def get_current_version(self, uuid):
+    def get_current_version(self):
         """Retrieve the current version ID.
 
         Returns:
@@ -210,8 +212,13 @@ class DicedRepo(object):
         Args:
             dataname (str): name of file
             data (str): data to store
+        
+        Raises:
+            DicedException if locked
         """
 
+        if self.locked:
+            raise DicedException("Node already locked")
         self.nodeconn.put(self.FilesLocation, dataname, data)
 
 
@@ -230,9 +237,10 @@ class DicedRepo(object):
 
         data = None
         try:
-            data = self.nodeconn.get(Filelocation, dataname)
+            data = self.nodeconn.get(self.FilesLocation, dataname)
         except DVIDException:
             raise DicedException("file does not exist")
+        return data
 
     def list_instances(self, showhidden=False):
         """Lists data store in this version of the repo.
@@ -265,8 +273,8 @@ class DicedRepo(object):
             List of strings for file names
         """
 
-        return self.nodeconn.custom_request("/" + self.FilesLocation + "/keys/0/z",
-            ConnectionMethod.GET)
+        return json.loads(self.nodeconn.custom_request("/" + self.FilesLocation + "/keys/0/z", "",
+            ConnectionMethod.GET))
 
     def create_branch(self, message):
         """Create a new branch from this locked node.
@@ -284,13 +292,13 @@ class DicedRepo(object):
         if not self.locked:
             raise DicedException("Must lock node before branching")
         
-        res = self.nodeconn.custom_request("/branch",
-                json.dumps({"note": message}), ConnectionMethod.POST)
+        res = json.loads(self.nodeconn.custom_request("/branch",
+                json.dumps({"note": message}), ConnectionMethod.POST))
 
         #  add new uuid (no need to reinit everything)
-        self.alluuids.add(res["child"])
+        self.alluuids.add(str(res["child"]))
 
-        return res["child"]
+        return str(res["child"])
         
 
     def lock_node(self, message):
@@ -322,9 +330,15 @@ class DicedRepo(object):
         
         Args:
             filename (str): name of file
+        
+        Raises:
+            DicedExcpetion if node is already locked.
         """
+        
+        if self.locked:
+            raise DicedException("Node already locked")
 
-        self.nodeconn.custom_request("/" + FilesLocation + "/key/" + filename, 
+        self.nodeconn.custom_request("/" + self.FilesLocation + "/key/" + filename, 
                 "", ConnectionMethod.DELETE)
         
     def delete_array(self, dataname):
@@ -358,12 +372,12 @@ class DicedRepo(object):
         # load all versions in repo
         self.alluuids = set()
         dag = self.repoinfo["DAG"]["Nodes"]
-        for uuid, nodedata in dag.items():
-            self.alluuids.add(nodedata["UUID"])
+        for uuidt, nodedata in dag.items():
+            self.alluuids.add(str(nodedata["UUID"]))
         
         for instancename, val in self.repoinfo["DataInstances"].items():
             # name is not necessarily unique to a repo
-            self.allinstances[(instancename, val["Base"]["DataUUID"])] = val["Base"]["TypeName"]
+            self.allinstances[(str(instancename), str(val["Base"]["DataUUID"]))] = str(val["Base"]["TypeName"])
         
 
         # datainstances that should be hidden (array of names) 
@@ -376,7 +390,7 @@ class DicedRepo(object):
         # check if locked note
         dag = self.repoinfo["DAG"]["Nodes"]
         for tuuid, nodedata in dag.items():
-            nodeids[nodedata["VersionID"]] = nodedata
+            nodeids[str(nodedata["VersionID"])] = nodedata
             if tuuid.startswith(uuid):
                 self.uuid = str(tuuid)
                 self.current_node = nodedata
@@ -386,9 +400,9 @@ class DicedRepo(object):
         ancestors = set()
         currnode = self.current_node
         while True:
-            ancestors.add(currnode["UUID"])
-            if len(self.current_node["Parents"]) > 0:
-                currnode = nodeids[self.current_node["Parents"][0]] 
+            ancestors.add(str(currnode["UUID"]))
+            if len(currnode["Parents"]) > 0:
+                currnode = nodeids[str(currnode["Parents"][0])] 
             else:
                 break
 
@@ -397,5 +411,5 @@ class DicedRepo(object):
 
         for instancename, val in self.repoinfo["DataInstances"].items():
             if val["Base"]["DataUUID"] in ancestors:
-                self.activeinstances[instancename] = val["Base"]["TypeName"]
+                self.activeinstances[str(instancename)] = str(val["Base"]["TypeName"])
 
