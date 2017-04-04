@@ -35,7 +35,7 @@ class DicedArray(object):
 
     MAX_REQ_SIZE = 512*512*512
 
-    def __init__(self, name, dicedstore, locked, nodeconn, allmeta, numdims, dtype, islabel3D):
+    def __init__(self, name, dicedstore, locked, nodeconn, numdims, dtype, islabel3D):
         """Internal Init.
 
         Init is called by DicedRepo.  It has a pointer to dicedstore
@@ -46,9 +46,9 @@ class DicedArray(object):
             dicedstore (DicedStore): referenced to DicedStore
             locked (str): if node locked, read only
             nodeconn (libdvid object): connection to DVID version node
-            allmeta (json): metadata for instance
             numdims (int): number of dimensions for array
             dtype (ArrayDtype): array datatype
+            islabels3D (bool): is a label array type
         """
 
         self.name = name
@@ -60,8 +60,18 @@ class DicedArray(object):
         self.islabel3D = islabel3D
 
         # extract specific meta
+        allmeta = self.nodeconn.get_typeinfo(self.name)
         self.blocksize = allmeta["Extended"]["BlockSize"]
-    
+   
+    def get_numdims(self):
+        """Retrieves the number of dimensions.
+
+        Returns:
+            int indicating the number of dimensions
+        """
+
+        return self.numdims
+
     def get_extents(self):
         """Retrieve extants for array.
 

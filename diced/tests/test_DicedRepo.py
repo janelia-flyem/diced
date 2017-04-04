@@ -3,9 +3,12 @@ import tempfile
 import shutil
 import os
 import time
+import json
 
 from diced import DicedStore
 from diced import DicedException
+from diced import ArrayDtype
+from libdvid import DVIDNodeService
 
 class TestDicedRepo(unittest.TestCase):
     def test_repoversion(self):
@@ -130,6 +133,130 @@ class TestDicedRepo(unittest.TestCase):
         # file shouldn't be deleted in root
         allfiles = myrepo.list_files() 
         self.assertEqual(len(allfiles), 2)
+
+        store._shutdown_store()
+
+    def test_array(self): 
+        """Test array creation/loading interface.
+
+        Tries creating different types of arrays,
+        checks proper deletion, and checks error
+        handling.
+        """
+
+        # create store object and repo
+        dbdir = tempfile.mkdtemp()
+        store = DicedStore(dbdir)
+        # my initial repo
+        store.create_repo("myrepo")
+        myrepo = store.open_repo("myrepo")
+
+        # test generic 3D raw array type
+        arr = myrepo.create_array("myarray", ArrayDtype.uint8)
+        self.assertEqual(arr.numdims, 3)
+        self.assertFalse(arr.islabel3D)
+        self.assertFalse(arr.locked)
+
+        arr = myrepo.get_array("myarray")
+        self.assertEqual(arr.numdims, 3)
+        self.assertFalse(arr.islabel3D)
+        self.assertFalse(arr.locked)
+
+
+        # test 2D raw array type
+        arr = myrepo.create_array("myarray2d", ArrayDtype.uint8, dims=2)
+        self.assertEqual(arr.numdims, 2)
+        self.assertFalse(arr.islabel3D)
+        self.assertFalse(arr.locked)
+
+        arr = myrepo.get_array("myarray2d")
+        self.assertEqual(arr.numdims, 2)
+        self.assertFalse(arr.islabel3D)
+        self.assertFalse(arr.locked)
+        
+
+        # check 3D labels
+        arr = myrepo.create_array("mylabelarray", ArrayDtype.uint64, islabel3D=True)
+        self.assertEqual(arr.numdims, 3)
+        self.assertTrue(arr.islabel3D)
+        self.assertFalse(arr.locked)
+        
+        arr = myrepo.get_array("myarray2d")
+        self.assertEqual(arr.numdims, 2)
+        
+
+        # query instances
+        instances = myrepo.list_instances()
+        self.assertEqual(len(instances), 3)
+        
+        allinstances = myrepo.list_instances(showhidden=True)
+        self.assertEqual(len(allinstances), 5)
+
+
+        # test delete
+        myrepo.delete_array("myarray2d")
+        instances = myrepo.list_instances()
+        self.assertEqual(len(instances), 2)
+
+        # reinsert and change meta and lossy
+        arr = myrepo.create_array("myarray2d", ArrayDtype.uint8, dims=3, lossycompression=True)
+        self.assertEqual(arr.numdims, 3)
+        self.assertFalse(arr.islabel3D)
+        self.assertFalse(arr.locked)
+
+        # test hidden files set in meta
+        ns = DVIDNodeService("127.0.0.1:8000", myrepo.get_current_version())
+        ns.create_keyvalue("blahblah")
+       
+        # reload myrepo
+        myrepo.change_version(myrepo.get_current_version())
+        allinstances = myrepo.list_instances(showhidden=True)
+        self.assertEqual(len(allinstances), 6)
+        self.assertTrue(("blahblah", "keyvalue") in allinstances) 
+
+         
+        # test hidden exclusion add
+        ns.put(".meta", "restrictions", json.dumps(["myarray2d"]))
+        myrepo.change_version(myrepo.get_current_version())
+        allinstances = myrepo.list_instances()
+        self.assertEqual(len(allinstances), 2)
+    
+
+        # test array errors
+        founderror = False
+        try:
+            arr = myrepo.create_array("myarray", ArrayDtype.uint8)
+        except DicedException:
+            founderror = True
+        self.assertTrue(founderror)
+
+        founderror = False
+        try:
+            arr = myrepo.create_array("myarray", ArrayDtype.uint16, islabel3D=True)
+        except DicedException:
+            founderror = True
+        self.assertTrue(founderror)
+
+        founderror = False
+        try:
+            arr = myrepo.get_array("myarray3")
+        except DicedException:
+            founderror = True
+        self.assertTrue(founderror)
+
+        # try to create array on locked node
+        myrepo.lock_node("blah")
+        try:
+            arr = myrepo.create_array("myarray4", ArrayDtype.uint16)
+        except DicedException:
+            founderror = True
+        self.assertTrue(founderror)
+
+        # check lock status
+        arr = myrepo.get_array("myarray2d")
+        self.assertEqual(arr.numdims, 3)
+        self.assertFalse(arr.islabel3D)
+        self.assertTrue(arr.locked)
 
         store._shutdown_store()
 

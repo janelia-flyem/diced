@@ -4,10 +4,12 @@
 import numpy as np
 from enum import Enum
 import json
+import subprocess
 
 from libdvid import DVIDNodeService, ConnectionMethod, DVIDConnection
 from libdvid._dvid_python import DVIDException
 from DicedException import DicedException
+from DicedArray import DicedArray
 
 class ArrayDtype(Enum):
     """Defines datatypes supported.
@@ -24,6 +26,15 @@ class DicedRepo(object):
         If the version of the repo has been locked (i.e., is not open),
         creating datainstance and writing data is disabled.  If one
         wants to write to the repo, a new node should be branched.
+    
+        There are several several metadata conventions that are
+        used by diced.
+
+            * files are always located in '.files'
+            * .meta contains various information about repo
+            * .meta/restrictions: is a list of instance names to be ignored by default (set outside of diced)
+            * .meta/instance:{instancename:datauuid}: contains '{"numdims": <num>}'
+
     """ 
     
     # block size constants
@@ -40,13 +51,12 @@ class DicedRepo(object):
     LabelTypeMappings = {ArrayDtype.uint8: "labelblk", ArrayDtype.uint16: "labelblk",
                         ArrayDtype.uint32: "labelblk", ArrayDtype.uint64: "labelblk"} 
 
-    
     LabelTypes = set(["labelblk"])
    
     MetaLocation = ".meta"
     FilesLocation = ".files"
     RestrictionName = "restrictions"
-    InstanceMetaPrefix = "instance/"
+    InstanceMetaPrefix = "instance:"
 
     def __init__(self, server, uuid, dicedstore):
         self.server = server
@@ -121,30 +131,31 @@ class DicedRepo(object):
             DicedException if the array does not exist
         """
 
-        if name in self.activeInstances:
+        if name in self.activeinstances:
             # check if accepted type
-            typename = self.activeInstances[name]
-            if typename in SupportedTypes: # only support arrays
-                islabel3D = typename in LabelTypes
+            typename = self.activeinstances[name]
+            if typename in self.SupportedTypes: # only support arrays
+                islabel3D = typename in self.LabelTypes
                 numdims = 3
 
-                # check if num dims and user dtype specified
+                # check if num dims specified
                 try:
-                    rootuuid = self.current_node["DataInstances"][name]["Base"]["DataUUID"]
-                    data = self.nodeconn.get_json(self.MetaLocation, self.InstanceMetaPrefix+name+":"+rootuuid) 
+                    datauuid = self.repoinfo["DataInstances"][name]["Base"]["DataUUID"]
+                    data = self.nodeconn.get_json(self.MetaLocation, str(self.InstanceMetaPrefix+name+":"+datauuid))
                     numdims = data["numdims"]
                 except:
                     pass
 
                 return DicedArray(name, self.dicedstore, self.locked, self.nodeconn, 
-                    self.current_node, numdims, dtype, islabel3D)
+                        numdims, self.SupportedTypes[typename], islabel3D)
             else:
                 raise DicedException("Instance name: " + name + " has an unsupported type " + typename)
         
         raise DicedException("Instance name: " + name + " not found in version " + self.uuid)
 
 
-    def create_array(name, dtype, dims=3, islabel3D=False, lossycompression=False, versioned=True): 
+    def create_array(self, name, dtype, dims=3, islabel3D=False,
+            lossycompression=False, versioned=True): 
         """Create a new array in the repo at this version.
 
         Args:
@@ -172,39 +183,36 @@ class DicedRepo(object):
         if islabel3D and dims != 3:
             raise DicedException("islabel3D only supported for 3D data")
         
-        if islabel3D and dtype != ArrayDtype.uint8:
+        if islabel3D and dtype != ArrayDtype.uint64:
             raise DicedException("islabel3D only works with 64 bit data")
 
         endpoint = "/repo/" + self.uuid + "/instance"
-        blockstr = "%d,%d,%d" % (blocksize[2], blocksize[1], blocksize[0])
-        
-        typename = RawTypeMappings[dtype]
+        typename = self.RawTypeMappings[dtype]
         if islabel3D:
-            typename = LabelTypeMappings[dtype]
+            typename = self.LabelTypeMappings[dtype]
 
         # handle blocksize
-        blockstr = str(BLKSIZED3D) + "," + str(BLKSIZED3D) + "," + str(BLKSIZED3D)
+        blockstr = str(self.BLKSIZE3D) + "," + str(self.BLKSIZE3D) + "," + str(self.BLKSIZE3D)
         if dims == 2:
-            blockstr = str(BLKSIZED2D) + "," + str(BLKSIZED2D) + "," + str(1)
+            blockstr = str(self.BLKSIZE2D) + "," + str(self.BLKSIZE2D) + "," + str(1)
         if dims == 1:
-            blockstr = str(BLKSIZED1D) + "," + str(1) + "," + str(1)
+            blockstr = str(self.BLKSIZE1D) + "," + str(1) + "," + str(1)
 
         data = {"typename": typename, "dataname": name, "BlockSize": blockstr}
         
-        if not islabels3D and lossycompression:
+        if not islabel3D and lossycompression:
             data["Compression"] = "jpeg"
 
         self.rawconn.make_request(endpoint, ConnectionMethod.POST, json.dumps(data))
 
-        # use '.meta' keyvalue to store array size (since not internal to DVID yet) 
-
-        self.nodeconn.put(self.MetaLocation, self.InstanceMetaPrefix+name+":"+self.uuid, json.dumps({"numdims": dims}))
-
         # update current node meta 
         self._init_version(self.uuid)
+        
+        # use '.meta' keyvalue to store array size (since not internal to DVID yet)
+        self.nodeconn.put(self.MetaLocation, self.InstanceMetaPrefix+name+":"+str(self.repoinfo["DataInstances"][name]["Base"]["DataUUID"]), json.dumps({"numdims": dims}))
 
         return DicedArray(name, self.dicedstore, False, self.nodeconn, 
-            self.current_node, dims, dtype, islabel3D)
+            dims, dtype, islabel3D)
 
     def upload_filedata(self, dataname, data):
         """Upload file data to this repo version.
@@ -252,7 +260,7 @@ class DicedRepo(object):
             showhidden (boolean): show all instances (even non-array)
        
         Return:
-            [ (instance name, ArrayType) ] if showhidden is True
+            [ (instance name, ArrayDtype) ] if showhidden is True
             the function returns [ (instance name, type name string) ].
 
         """
@@ -262,7 +270,7 @@ class DicedRepo(object):
             if showhidden:
                 res.append((instance, typename))
             elif typename in self.SupportedTypes and instance not in self.hidden_instances:
-                res.append(instance, self.SupportedTypes[typename])
+                res.append((instance, self.SupportedTypes[typename]))
     
         return res
 
@@ -358,8 +366,12 @@ class DicedRepo(object):
 
         """
 
-        deletecall = subprocess.Popen(['dvid', '-rpc='+str(self.dicedstore.rpcport), 'repo', self.uuid, 'delete', dataname], stdout=None)
+        addr = self.dicedstore._server.split(':')[0]
+        rpcaddress = addr + ":" + str(self.dicedstore.rpcport)
+        deletecall = subprocess.Popen(['dvid', '-rpc='+rpcaddress, 'repo', self.uuid, 'delete', dataname], stdout=None)
         deletecall.communicate()
+
+        self._init_version(self.uuid)
 
     def _init_version(self, uuid):
         # create connection to repo
@@ -410,6 +422,6 @@ class DicedRepo(object):
         self.activeinstances = {}
 
         for instancename, val in self.repoinfo["DataInstances"].items():
-            if val["Base"]["DataUUID"] in ancestors:
+            if str(val["Base"]["RepoUUID"]) in ancestors:
                 self.activeinstances[str(instancename)] = str(val["Base"]["TypeName"])
 
