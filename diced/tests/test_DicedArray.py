@@ -9,6 +9,60 @@ from diced import ArrayDtype
 from libdvid import DVIDNodeService
 
 class TestDicedArray(unittest.TestCase):
+    def test_newdvidinstances(self):
+        """Tests 16,32,64 raw data.
+        """
+        
+        # create store object and repo
+        dbdir = tempfile.mkdtemp()
+        store = DicedStore(dbdir)
+        # my initial repo
+        store.create_repo("myrepo")
+        myrepo = store.open_repo("myrepo")
+
+        # test generic 16 bit
+        arr = myrepo.create_array("myarray16", ArrayDtype.uint16)
+        self.assertEqual(arr.get_numdims(), 3)
+        extents = arr.get_extents()
+        self.assertEqual(extents, (slice(0,0),slice(0,0),slice(0,0)))
+
+        # set and get data
+        data = numpy.zeros((400,200,100), numpy.uint16)
+        data[:] = 5
+        arr[1:401,2:202,3:103] = data
+        matchdata = arr[1:401,2:202,3:103]
+        matches = numpy.array_equal(data, matchdata)
+        self.assertTrue(matches)
+
+        # test generic 32 bit
+        arr = myrepo.create_array("myarray32", ArrayDtype.uint32)
+        self.assertEqual(arr.get_numdims(), 3)
+        extents = arr.get_extents()
+        self.assertEqual(extents, (slice(0,0),slice(0,0),slice(0,0)))
+
+        # set and get data
+        data = numpy.zeros((400,200,100), numpy.uint32)
+        data[:] = 5
+        arr[1:401,2:202,3:103] = data
+        matchdata = arr[1:401,2:202,3:103]
+        matches = numpy.array_equal(data, matchdata)
+        self.assertTrue(matches)
+
+        # test generic 64 bit array type
+        arr = myrepo.create_array("myarray64", ArrayDtype.uint64)
+        self.assertEqual(arr.get_numdims(), 3)
+        extents = arr.get_extents()
+        self.assertEqual(extents, (slice(0,0),slice(0,0),slice(0,0)))
+
+        # set and get data
+        data = numpy.zeros((400,200,100), numpy.uint64)
+        data[:] = 5
+        arr[1:401,2:202,3:103] = data
+        matchdata = arr[1:401,2:202,3:103]
+        matches = numpy.array_equal(data, matchdata)
+        self.assertTrue(matches)
+
+
     def test_arraysmall(self):
         """Tests small get/puts.
 
@@ -21,7 +75,7 @@ class TestDicedArray(unittest.TestCase):
         store.create_repo("myrepo")
         myrepo = store.open_repo("myrepo")
 
-        # test generic 3D raw array type
+        # test 3D label array type
         arr = myrepo.create_array("myarray", ArrayDtype.uint64, islabel3D=True)
         self.assertEqual(arr.get_numdims(), 3)
         extents = arr.get_extents()
@@ -42,6 +96,9 @@ class TestDicedArray(unittest.TestCase):
         arr[-3,-1,4] = numpy.array([[[121]]])
         val = arr[-3,-1,4] 
         self.assertEqual(121, val)
+
+        extents = arr.get_extents()
+        self.assertEqual(extents, (slice(-64,448),slice(-64,256),slice(0,128)))
 
         # check array access
         arr[-3,-1,3:5] = numpy.array([[[121,122]]], numpy.uint64)
