@@ -2,6 +2,17 @@
 """
 
 import numpy as np
+from enum import Enum
+from DicedException import DicedException
+
+class ArrayDtype(Enum):
+    """Defines datatypes supported.
+    """
+    uint8 = np.uint8
+    uint16 = np.uint16
+    uint32 = np.uint32
+    uint64 = np.uint64
+
 
 class DicedArray(object):
     """Implements acces to nD arrays in Diced (__init__ internally by DicedRepo)
@@ -48,19 +59,19 @@ class DicedArray(object):
             nodeconn (libdvid object): connection to DVID version node
             numdims (int): number of dimensions for array
             dtype (ArrayDtype): array datatype
-            islabels3D (bool): is a label array type
+            islabel3D (bool): is a label array type
         """
 
-        self.name = name
+        self.instancename = name
         self.dicedstore = dicedstore
         self.locked = locked
-        self.nodeconn = nodeconn
+        self.ns = nodeconn
         self.numdims = numdims
         self.dtype = dtype
         self.islabel3D = islabel3D
 
         # extract specific meta
-        allmeta = self.nodeconn.get_typeinfo(self.name)
+        allmeta = self.ns.get_typeinfo(self.instancename)
         self.blocksize = allmeta["Extended"]["BlockSize"]
    
     def get_numdims(self):
@@ -75,14 +86,25 @@ class DicedArray(object):
     def get_extents(self):
         """Retrieve extants for array.
 
+        This shows the extent of data written aligned to
+        the internal chunk storage size.
+
         Returns:
             tuple of slices
         """
 
         # return extents (z,y,x)
-        val = self.nodeconn.get_typeinfo(self.instancename)
-        xs,ys,zs = val["Extended"]["MinPoint"]
-        xf,yf,zf = val["Extended"]["MaxPoint"]
+        val = self.ns.get_typeinfo(self.instancename)
+        
+        minpoint = val["Extended"]["MinPoint"]
+        xs = ys = zs = 0
+        if minpoint is not None:
+            xs,ys,zs = val["Extended"]["MinPoint"]
+        
+        maxpoint = val["Extended"]["MaxPoint"]
+        xf = yf = zf = -1
+        if maxpoint is not None:
+            xf,yf,zf = val["Extended"]["MaxPoint"]
         
         if self.numdims == 3:
             return (slice(zs,zf+1), slice(ys,yf+1), slice(xs,xf+1))
@@ -101,13 +123,13 @@ class DicedArray(object):
         # interface is the same for labels and raw arrays but the function is stateless
         # and can benefit from extra compression possible in labels in some use cases
         if self.dtype == ArrayDtype.uint8:
-            data = self.ns.get_array8bit(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabels3D)
+            data = self.ns.get_array8bit3D(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabel3D)
         elif self.dtype == ArrayDtype.uint16:
-            data = self.ns.get_array16bit(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabels3D)
+            data = self.ns.get_array16bit3D(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabel3D)
         elif self.dtype == ArrayDtype.uint32:
-            data = self.ns.get_array32bit(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabels3D)
+            data = self.ns.get_array32bit3D(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabel3D)
         elif self.dtype == ArrayDtype.uint64:
-            data = self.ns.get_array64bit(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabels3D)
+            data = self.ns.get_array64bit3D(self.instancename, (zsize, ysize, xsize), (z, y, x), self.islabel3D)
         else:
             raise DicedException("Invalid datatype for array")
 
@@ -122,13 +144,46 @@ class DicedArray(object):
             can be requested outside of the extents.
         """
 
-        if len(index) > 3:
-            raise DicedException("Does not support arrays with dimension greater than 3")
+        dimsreq = 1
+        # handle query of single point
+        singleindex1 = False
+        singleindex2 = False
+        singleindex3 = False
+
+        if type(index) == int:
+            index = slice(index, index+1)
+            singleindex3 = True
+        elif type(index) != slice:
+            dimsreq = len(index)
+            if dimsreq == 3:
+                a, b, c = index
+                if type(a) == int:
+                    a = slice(a, a+1)
+                    singleindex1 = True
+                if type(b) == int:
+                    b = slice(b, b+1)
+                    singleindex2 = True
+                if type(c) == int:
+                    c = slice(c, c+1)
+                    singleindex3 = True
+                index = (a, b, c)
+            if dimsreq == 2:
+                a, b = index
+                if type(a) == int:
+                    a = slice(a, a+1)
+                    singleindex2 = True
+                if type(b) == int:
+                    b = slice(b, b+1)
+                    singleindex3 = True
+                index = (a, b)
+
+        if self.numdims != dimsreq:
+            raise DicedException("Array has a different number of dimensions than requested")
 
         z = y = x = slice(0,1)
-        if len(index) == 3:
+        if dimsreq == 3:
             z,y,x = index
-        elif len(index) == 2:
+        elif dimsreq == 2:
             y, x = index
         else:
             x = index
@@ -140,14 +195,14 @@ class DicedArray(object):
         zsize = z.stop - z.start
         ysize = y.stop - y.start
         xsize = x.stop - x.start
-        if zsize*ysize*xsize > self.MAX_REQ_SIZE: 
-            data = numpy.zeros((zsize, ysize, xsize), dtype.value)
+        if zsize*ysize*xsize > self.MAX_REQ_SIZE:
+            data = np.zeros((zsize, ysize, xsize), self.dtype)
        
             # split into chunks
             zincr = zsize    
             yincr = ysize    
             xincr = xsize    
-       
+     
             while zincr*yincr*xincr > self.MAX_REQ_SIZE:
                 if zincr > yincr and zincr > xincr:
                     zincr = zincr/2 + zincr % 2
@@ -163,9 +218,9 @@ class DicedArray(object):
                         ystart = yiter + y.start
                         xstart = xiter + x.start
                        
-                        csizez = min(zsize - zstart, zincr)
-                        csizey = min(ysize - ystart, yincr)
-                        csizex = min(xsize - xstart, xincr)
+                        csizez = min(z.stop - zstart, zincr)
+                        csizey = min(y.stop - ystart, yincr)
+                        csizex = min(x.stop - xstart, xincr)
 
                         tdata = self._getchunk(zstart, ystart, xstart, csizez, csizey, csizex)
                         data[ziter:ziter+csizez, yiter:yiter+csizey, xiter:xiter+csizex] = tdata
@@ -173,27 +228,72 @@ class DicedArray(object):
             # small call can be had in one call
             data = self._getchunk(z.start, y.start, x.start, zsize, ysize, xsize)
 
+        # squeeze data as requested
+        if self.numdims == 3:
+            if singleindex1 and singleindex2 and singleindex3:
+                data = int(data.squeeze())
+            elif singleindex1 and singleindex2:
+                data = data.squeeze((0,1))
+            elif singleindex2 and singleindex3:
+                data = data.squeeze((1,2))
+            elif singleindex1 and singleindex3:
+                data = data.squeeze((0,2))
+            elif singleindex1:
+                data = data.squeeze(0)
+            elif singleindex2:
+                data = data.squeeze(1)
+            elif singleindex3:
+                data = data.squeeze(2)
+
+        elif self.numdims == 2:
+            data = data.squeeze(0)
+
+            if singleindex2 and singleindex3:
+                data = int(data.squeeze())
+            elif singleindex2:
+                data = data.squeeze(0)
+            elif singleindex3:
+                data = data.squeeze(1)
+
+        elif self.numdims == 1:
+            data = data.squeeze((0,1))
+            if singleindex3:
+                data = int(data.squeeze)
 
         return data
     
     def _setchunk(self, z, y, x, data):
         """Internal function to set data.
         """
+       
+        # does not support setting individual elements
+        # (inefficiently accesses diced store)
+        if type(data) != np.ndarray:
+            raise DicedException("Must set data using a numpy array")
         
         # check if block aligned and adjust extents
         xblk, yblk, zblk = self.blocksize
-        zsize, ysize, xsize = data.shape
-        zsizeorig, ysizeorig, xsizeorig = data.shape
+        zsize = ysize = xsize = 1
+        if len(data.shape) == 3:
+            zsize, ysize, xsize = data.shape
+        elif len(data.shape) == 2:
+            ysize, xsize = data.shape
+        elif len(data.shape) == 1:
+            xsize = data.shape[0]
+       
+        zsizeorig = zsize
+        ysizeorig = ysize
+        xsizeorig = xsize
         
         blockaligned = True
+    
+        znew = z - (z%zblk)
+        ynew = y - (y%yblk)
+        xnew = x - (x%xblk)
        
-        znew -= (z%zblk)
-        ynew -= (y%zblk)
-        xnew -= (x%zblk)
-        
         zsize += (z%zblk)
-        ysize += (y%zblk)
-        xsize += (x%zblk)
+        ysize += (y%yblk)
+        xsize += (x%xblk)
 
         if znew != z or ynew != y or xnew != x:
             blockaligned = False
@@ -214,19 +314,19 @@ class DicedArray(object):
         # TODO: optimize to minimize data fetches from DVID
         if not blockaligned:
             newdata = self._getchunk(znew, ynew, xnew, zsize, ysize, xsize)
-            newdata[(z-znew):(z-znew+zsizeorig),(y-ynew):(y-ynew+ysizeorig),(x-new):(x-xnew+xsizeorig)]
+            newdata[(z-znew):(z-znew+zsizeorig),(y-ynew):(y-ynew+ysizeorig),(x-xnew):(x-xnew+xsizeorig)] = data
             data = newdata
 
         # interface is the same for labels and raw arrays but the function is stateless
         # and can benefit from extra compression possible in labels in some use cases
         if self.dtype == ArrayDtype.uint8:
-            data = self.ns.put_array8bit(self.instancename, data, (z, y, x), self.islabels3D)
+            data = self.ns.put_array8bit3D(self.instancename, data, (znew, ynew, xnew), self.islabel3D)
         elif self.dtype == ArrayDtype.uint16:
-            data = self.ns.put_array16bit(self.instancename, data, (z, y, x), self.islabels3D)
+            data = self.ns.put_array16bit3D(self.instancename, data, (znew, ynew, xnew), self.islabel3D)
         elif self.dtype == ArrayDtype.uint32:
-            data = self.ns.put_array32bit(self.instancename, data, (z, y, x), self.islabels3D)
+            data = self.ns.put_array32bit3D(self.instancename, data, (znew, ynew, xnew), self.islabel3D)
         elif self.dtype == ArrayDtype.uint64:
-            data = self.ns.put_array64bit(self.instancename, data, (z, y, x), self.islabels3D)
+            data = self.ns.put_array64bit3D(self.instancename, data, (znew, ynew, xnew), self.islabel3D)
         else:
             raise DicedException("Invalid datatype for array")
 
@@ -238,17 +338,41 @@ class DicedArray(object):
             Large requests are split into several small requests.  Data
             can be sent outside of the extents.
         """
-        
-        if len(index) > 3:
-            raise DicedException("Does not support arrays with dimension greater than 3")
+       
+        dimsreq = 1
+        if type(index) == int:
+            # handle query of single point
+            index = slice(index, index+1)
+        elif type(index) != slice:
+            dimsreq = len(index)
+            if dimsreq == 3:
+                a, b, c = index
+                if type(a) == int:
+                    a = slice(a, a+1)
+                if type(b) == int:
+                    b = slice(b, b+1)
+                if type(c) == int:
+                    c = slice(c, c+1)
+                index = (a, b, c)
+            if dimsreq == 2:
+                a, b = index
+                if type(a) == int:
+                    a = slice(a, a+1)
+                if type(b) == int:
+                    b = slice(b, b+1)
+                index = (a, b)
+
+
+        if self.numdims != dimsreq:
+            raise DicedException("Array has a different number of dimensions than requested")
 
         if self.locked:
             raise DicedException("Cannot write to locked node")
 
         z = y = x = slice(0,1)
-        if len(index) == 3:
+        if dimsreq == 3:
             z,y,x = index
-        elif len(index) == 2:
+        elif dimsreq == 2:
             y, x = index
         else:
             x = index
@@ -259,8 +383,7 @@ class DicedArray(object):
         ysize = y.stop - y.start
         xsize = x.stop - x.start
         if zsize*ysize*xsize > self.MAX_REQ_SIZE: 
-            data = numpy.zeros((zsize, ysize, xsize), dtype.value)
-       
+            data = np.zeros((zsize, ysize, xsize), self.dtype)
             # split into chunks
             zincr = zsize    
             yincr = ysize    
@@ -281,14 +404,14 @@ class DicedArray(object):
                         ystart = yiter + y.start
                         xstart = xiter + x.start
                        
-                        csizez = min(zsize - zstart, zincr)
-                        csizey = min(ysize - ystart, yincr)
-                        csizex = min(xsize - xstart, xincr)
+                        csizez = min(z.stop - zstart, zincr)
+                        csizey = min(y.stop - ystart, yincr)
+                        csizex = min(x.stop - xstart, xincr)
 
                         self._setchunk(zstart, ystart, xstart,
                                 val[ziter:ziter+csizez, yiter:yiter+csizey, xiter:xiter+csizex].copy())
         else:
-            self._setchunk(zstart, ystart, xstart, val)
+            self._setchunk(z.start, y.start, x.start, val)
 
         return
 

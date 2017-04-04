@@ -2,7 +2,6 @@
 """
 
 import numpy as np
-from enum import Enum
 import json
 import subprocess
 
@@ -10,14 +9,7 @@ from libdvid import DVIDNodeService, ConnectionMethod, DVIDConnection
 from libdvid._dvid_python import DVIDException
 from DicedException import DicedException
 from DicedArray import DicedArray
-
-class ArrayDtype(Enum):
-    """Defines datatypes supported.
-    """
-    uint8 = np.uint8
-    uint16 = np.uint16
-    uint32 = np.uint32
-    uint64 = np.uint64
+from DicedArray import ArrayDtype
 
 class DicedRepo(object):
     """Provides access to a version of the specified repo.
