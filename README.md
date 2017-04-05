@@ -63,10 +63,16 @@ be rebuilt against the conda installation by 'python setup.py install'.
 TBD
 
 
-## Currently Limitations/Future Work
+## Current Limitations/Future Work
 
 * Only 1, 2, and 3D data is currently supported (eventual support for >3D)
 * Data fetching can be done in parallel but currently writing can
 only be done by one writer unless special care is taken (see **Performance Considerations** below).
-* Google Cloud Storage is the only cloud store supported at this time 
+* Google Cloud Storage is the only cloud store supported at this time
 
+## Performance Considerations
+
+* If one chooses a Google-backed DICED store, it should be possible to achieve high read throughput over several machines.  To do this, the user open multiple connections to DICED on different cluster nodes.
+* Array data is stored as uniform smaller chunks internally.  When adding data to DICED, some writes can be inefficient as each write can result in reading data to reassemble the internal chunk.  For 3D array, data is partitioned into 64x64x64 blocks and optimal writing would ensure alignment to this partitioning.
+* Parallel writes (even if spatially disjoint) can be dangerous because there is no protection if two processes write to the same internal chunk.  To circumvent this the user can ensure that writes are disjoint in the internal chunk space (such as the 64x64x64 blocks).
+* Related to the previous, DICED does not allow multiple connections where metadata can change, such as the addition of new array objects.
