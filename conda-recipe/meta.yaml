@@ -1,31 +1,37 @@
 package:
-  name: diced
-  version: "0.3"
+    name: diced
+
+  {% if GIT_DESCRIBE_NUMBER|int == 0 %}
+    version: {{GIT_DESCRIBE_TAG}}
+  {% else %}
+    # If we're using a non-tagged revision, append '.postN' to the version
+    version: {{GIT_DESCRIBE_TAG}}.post{{GIT_DESCRIBE_NUMBER}}
+  {% endif %}
 
 source:
-  git_url: ../
-  git_tag: HEAD
+  path: ../
 
 build:
-  number: 1
+  number: 0
+  string: py{{py}}_{{PKG_BUILDNUM}}_g{{GIT_FULL_HASH[:7]}}
   
 requirements:
   build:
-    - python
+    - python 2.7*
     - setuptools
-    - libdvid-cpp 0.2.post59
+    - libdvid-cpp >=0.2.post59
     - numpy
   run:
-    - python
+    - python 2.7*
     - numpy
     - dvid
-    - libdvid-cpp 0.2.post59
+    - libdvid-cpp >=0.2.post59
     - requests
     - enum34
     
-#test:
-#  imports:
-#    - diced 
+test:
+  imports:
+    - diced
 
 about:
   home: http://github.com/janelia-flyem/diced
