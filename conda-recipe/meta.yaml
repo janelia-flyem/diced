@@ -1,25 +1,25 @@
 package:
   name: diced
-  version: "0.1"
+  version: "0.2"
 
 source:
   git_url: ../
   git_tag: HEAD
 
 build:
-  number: 7
+  number: 0
   
 requirements:
   build:
-    - python 2.7.11
+    - python
     - setuptools
-    - libdvid-cpp
+    - libdvid-cpp 0.2.post59
     - numpy
   run:
-    - python 2.7.11
+    - python
     - numpy
     - dvid
-    - libdvid-cpp
+    - libdvid-cpp 0.2.post59
     - requests
     - enum34
     
