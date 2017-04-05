@@ -135,7 +135,7 @@ max_log_age = 30   # days
                 tomldata = self.LEVELDB_TOML
                 tomldata = tomldata.replace(self.DBPATH, location)
 
-            tomldata = tomldata.replace(self.WEBCLIENT, consolepath + "/dist/")
+            tomldata = tomldata.replace(self.WEBCLIENT, consolepath + "/lite-dist/")
             tomldata = tomldata.replace(self.LOGNAME, logname)
             tomldata = tomldata.replace(self.RPCPORT, str(rpcport))
             tomldata = tomldata.replace(self.PORT, str(port))
