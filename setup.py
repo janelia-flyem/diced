@@ -4,7 +4,7 @@ packages=['diced'
          ]
 
 setup(name='diced',
-      version='0.1',
+      version='0.2',
       description='Enable access to large, cloud-based nD data volumes',
       url='https://github.com/janelia-flyem/DVIDCloudStore',
       packages=packages,
