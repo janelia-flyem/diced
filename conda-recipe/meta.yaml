@@ -1,13 +1,13 @@
 package:
   name: diced
-  version: "0.2"
+  version: "0.3"
 
 source:
   git_url: ../
   git_tag: HEAD
 
 build:
-  number: 0
+  number: 1
   
 requirements:
   build:
