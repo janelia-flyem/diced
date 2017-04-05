@@ -1,0 +1,49 @@
+general:
+  branches:
+    ignore:
+      - gh-pages # Don't test the gh-pages branch
+
+## Customize the test machine
+machine:
+  # Add some environment variables
+  environment:
+    CONDA_ROOT: /home/ubuntu/miniconda
+    TEST_ENV_NAME: test-env
+    TEST_ENV_PREFIX: /home/ubuntu/miniconda/envs/test-env
+    PATH: ${TEST_ENV_PREFIX}/bin:${CONDA_ROOT}/bin:${PATH}
+
+## Customize dependencies
+dependencies:
+  cache_directories:
+    - /home/ubuntu/miniconda
+
+  override:
+    # Download/install conda (if not already cached)
+    # Also, install diced just to pull the dependencies into the cache,
+    # and then remove the diced package itself.
+    - >
+      if [[ ! -d ${CONDA_ROOT} ]]; then
+          echo "Installing Miniconda...";
+          wget --quiet https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh;
+          bash Miniconda-latest-Linux-x86_64.sh -b -p ${CONDA_ROOT};
+          conda install -y conda-build;
+          conda config --add channels flyem;          
+          conda create -y -n ${TEST_ENV_NAME} diced;
+          conda remove -y -n ${TEST_ENV_NAME} diced;
+      else
+          echo "Using cached Miniconda install";
+      fi
+
+## Circle-ci checks out a "shallow" copy of the git repo,
+## but conda-build can't handle that.
+## Make it a full repo first.
+## (The source is cached, so it might not really be shallow. Ignore errors from git in that case.)
+checkout:
+  post:
+    - git fetch --unshallow || true
+
+## Customize test commands
+test:
+  override:
+    - conda config --add channels diced
+    - conda build conda-recipe
