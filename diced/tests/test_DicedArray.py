@@ -62,6 +62,7 @@ class TestDicedArray(unittest.TestCase):
         matches = numpy.array_equal(data, matchdata)
         self.assertTrue(matches)
 
+        store._shutdown_store()
 
     def test_arraysmall(self):
         """Tests small get/puts.
@@ -105,9 +106,6 @@ class TestDicedArray(unittest.TestCase):
         val = arr[-3,-1,3:5] 
         matches = numpy.array_equal(numpy.array([121,122], numpy.uint64), val)
         self.assertTrue(matches)
-
-
-
 
         # check error cases
         founderror = False

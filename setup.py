@@ -8,5 +8,6 @@ setup(name='diced',
       description='Enable access to large, cloud-based nD data volumes',
       url='https://github.com/janelia-flyem/DVIDCloudStore',
       packages=packages,
-      include_package_data=True
+      include_package_data=True,
+      test_suite="diced.tests"
       )
