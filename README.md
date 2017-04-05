@@ -60,8 +60,50 @@ be rebuilt against the conda installation by 'python setup.py install'.
 
 
 ## Tutorial and Examples
-TBD
 
+### General workflow
+
+* Create a DicedStore which spawns a DVID instance for access versioned array data.
+* Create or open a DicedRepo from the DicedStore.  This is similar to opening or creating a repository in Github.
+* Create nD DicedArray types in the repo
+* Visualize repo information on the html web viewer that is launched on the same port as the DicedStore
+* Lock, branch version nodes as your data repository changes.
+
+### Scenario 1: Create a local database to store image data
+
+    % from diced import DicedStore, ArrayDtype
+    % store = DicedStore("~/myrepo.diced") # location of diced repo
+    % repo = store.create_repo("firstrepo", "My first repo")
+    % arr = repo.create_array("arrayname", ArrayDtype.uint16) # default 3D array
+    % arr[0:1, 0:1, 0:5] = numpy.array([[[3,2,4,1,6]]])
+    % val = arr[0,0,0] # val = 3
+
+By default this will start a DicedStore that runs on 127.0.0.1:8000 with
+a corresponding web interface.  The repo is created with a unique id (UUID).
+
+### Scenario 2: Access Google storage
+
+* Create a Google cloud account.
+* Create a blank google storage bucket (e.g., mybucketname)
+* Download permissions to access the bucket as a JSON
+
+Accessing the data is the same as the first example but the creation
+of the DicedStore is different.
+
+    % DiceStore("mybucketname", permissionfile="path/to/my/key.json"
+
+### Scenario 3: Versioning Data
+
+For the above examples, one can lock this version and create a new
+version of the array data.  This has conceptual similarities to Git
+but unlike Git the unique identified (UUID) used by DICED is determined
+before writing data for a given version node.  In other words,
+a unique identifier is not a content-based hash and is set up front.
+
+    % repo.lock_node("finished work") # can no longer write to data
+    % repo.create_branch("new branch from locked node") # can only branch from locked node
+    % arr[0:1, 0:1, 0:5] = numpy.array([[[4,2,4,1,6]]])
+    % val = arr[0,0,0] # val = 4 only in this version 
 
 ## Current Limitations/Future Work
 
@@ -69,6 +111,7 @@ TBD
 * Data fetching can be done in parallel but currently writing can
 only be done by one writer unless special care is taken (see **Performance Considerations** below).
 * Google Cloud Storage is the only cloud store supported at this time
+* Having multiple versions for an array can slow access time; this can be improved in the future
 
 ## Performance Considerations
 
