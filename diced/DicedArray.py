@@ -196,7 +196,7 @@ class DicedArray(object):
         ysize = y.stop - y.start
         xsize = x.stop - x.start
         if zsize*ysize*xsize > self.MAX_REQ_SIZE:
-            data = np.zeros((zsize, ysize, xsize), self.dtype)
+            data = np.zeros((zsize, ysize, xsize), self.dtype.value)
        
             # split into chunks
             zincr = zsize    
@@ -383,7 +383,7 @@ class DicedArray(object):
         ysize = y.stop - y.start
         xsize = x.stop - x.start
         if zsize*ysize*xsize > self.MAX_REQ_SIZE: 
-            data = np.zeros((zsize, ysize, xsize), self.dtype)
+            data = np.zeros((zsize, ysize, xsize), self.dtype.value)
             # split into chunks
             zincr = zsize    
             yincr = ysize    

@@ -7,7 +7,7 @@ source:
   git_tag: HEAD
 
 build:
-  number: 2
+  number: 4
   
 requirements:
   build:
@@ -17,7 +17,7 @@ requirements:
     - python 2.7*  
     - numpy
     - dvid
-    - libdvid-cpp >=0.2
+    - libdvid-cpp
     - requests
     - enum34
     
