@@ -7,7 +7,7 @@ source:
   git_tag: HEAD
 
 build:
-  number: 1
+  number: 2
   
 requirements:
   build:
@@ -19,10 +19,11 @@ requirements:
     - dvid
     - libdvid-cpp >=0.2
     - requests
-
+    - enum34
+    
 #test:
 #  imports:
-#    - DVIDCloudStore 
+#    - diced 
 
 about:
   home: http://github.com/janelia-flyem/diced
