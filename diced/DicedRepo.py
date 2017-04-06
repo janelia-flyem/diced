@@ -26,6 +26,7 @@ class DicedRepo(object):
             * .meta contains various information about repo
             * .meta/restrictions: is a list of instance names to be ignored by default (set outside of diced)
             * .meta/instance:{instancename:datauuid}: contains '{"numdims": <num>}'
+            * .meta/neuroglancer: contains a list of instances compatible with neuroglancer
 
     """ 
     

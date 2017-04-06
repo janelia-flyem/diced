@@ -116,6 +116,7 @@ only be done by one writer unless special care is taken (see **Performance Consi
 * (todo) Simple helper function and executable script to save a list of files to the repo
 * (todo) Potentially allow files and other meta to be set via a .git style directory system
 * (todo) Create simple script to launch a single DicedStore to be shared by different processes.
+* (todo) Simple script to ingest h5 file, stack of images into arrays
 
 ## Performance Considerations
 
