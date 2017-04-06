@@ -66,7 +66,7 @@ be rebuilt against the conda installation by 'python setup.py install'.
 * Create a DicedStore which spawns a DVID instance for access versioned array data.
 * Create or open a DicedRepo from the DicedStore.  This is similar to opening or creating a repository in Github.
 * Create nD DicedArray types in the repo
-* Visualize repo information on the html web viewer that is launched on the same port as the DicedStore
+* Visualize repo information on the html web viewer that is launched on the same port as the DicedStore (default port 8000)
 * Lock, branch version nodes as your data repository changes.
 
 ### Scenario 1: Create a local database to store image data
@@ -112,6 +112,10 @@ a unique identifier is not a content-based hash and is set up front.
 only be done by one writer unless special care is taken (see **Performance Considerations** below).
 * Google Cloud Storage is the only cloud store supported at this time
 * Having multiple versions for an array can slow access time; this can be improved in the future
+* (todo) Support cluster and inline solutions for automatically generating multi-scale representation of image data
+* (todo) Simple helper function and executable script to save a list of files to the repo
+* (todo) Potentially allow files and other meta to be set via a .git style directory system
+* (todo) Create simple script to launch a single DicedStore to be shared by different processes.
 
 ## Performance Considerations
 

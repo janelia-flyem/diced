@@ -30,13 +30,18 @@ class DicedStore(object):
     PORT = "PORT" 
     RPCPORT = "RPCPORT"
     
-    GBUCKET_TOML = """
+    GBUCKET_TOML = '''
 [server]
 httpAddress = ":PORT"
 rpcAddress = ":RPCPORT"
 webClient = "WEBCLIENT"
 instance_id_gen = "sequential"
 instance_id_start = 100  # new ids start at least from this.
+
+note = """
+{"source": "gs://DBPATH"}
+"""
+
 [logging]
 logfile = "LOGNAME"
 max_log_size = 500 # MB
@@ -45,15 +50,20 @@ max_log_age = 30   # days
     [store.mutable]
         engine = "gbucket"
         bucket= "DBPATH"
-    """
+    '''
 
-    LEVELDB_TOML = """
+    LEVELDB_TOML = '''
 [server]
 httpAddress = ":PORT"
 rpcAddress = ":RPCPORT"
 webClient = "WEBCLIENT"
 instance_id_gen = "sequential"
 instance_id_start = 100  # new ids start at least from this.
+
+note = """
+{"source": "DBPATH"}
+"""
+
 [logging]
 logfile = "LOGNAME"
 max_log_size = 500 # MB
@@ -62,7 +72,9 @@ max_log_age = 30   # days
     [store.default]
         engine = "basholeveldb"
         path = "DBPATH"
-    """
+    '''
+
+    _FLYEMREPONAME = "flyem-public-connectome"
 
     def __init__(self, location, port=8000, rpcport=8001, permissionfile=None, appdir=None):
         """Init.
@@ -151,7 +163,12 @@ max_log_age = 30   # days
             local_env = os.environ.copy()
             if permissionfile is not None:
                 local_env["GOOGLE_APPLICATION_CREDENTIALS"] = permissionfile 
-                    
+            elif location.split("gs://")[1] == self._FLYEMREPONAME:
+                # use default permission for flyem repo read permission
+                # (alternatively could publish the JSON permissions separately)
+                permpath = pkg_resources.resource_filename('diced', 'permjsons/flyemreposperm.json')
+                local_env["GOOGLE_APPLICATION_CREDENTIALS"] = permpath
+                
             # check dvid does not already exist
             dvidexists = False 
             try:
