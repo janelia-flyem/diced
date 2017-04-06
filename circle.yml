@@ -45,5 +45,5 @@ checkout:
 ## Customize test commands
 test:
   override:
-    - conda config --add channels diced
+    - conda config --add channels flyem
     - conda build conda-recipe
