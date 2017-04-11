@@ -71,6 +71,11 @@ This will launch a web server similar to the one we are publicly hosting on
 http://127.0.0.1:8000.  The data can then be retrieved through the DICED python
 interface (see below).
 
+DICED provides a numpy-friendly layer over the standard DVID HTTP API.  By limiting
+the datatypes and operations supported, simple image and label array operations can be
+handled easily.  If you need more power, you can also access data directly from the 
+DVID API ([help link](http://emdata.janelia.org/api/help)) using HTTP requests.
+
 ## Tutorial and Examples
 
 ### General workflow
