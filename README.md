@@ -58,6 +58,23 @@ library, set your PATH to the location of PREFIX/envs/< NAME >/bin.
 Install DICED with conda.  Subsequent changes to the DICED source can
 be rebuilt against the conda installation by 'python setup.py install'.
 
+## Accessing Fly EM Public Data
+FlyEM has loaded several image volumes from EM connectomics into DICED.  You can
+view the datasets [here](http://emdata.janelia.org).  To access the data programmatically,
+we recommend using DICED locally and pointing to the DICED data store on google storage at
+gs://flyem-public-connectome.  To access this, install DICE and do the following:
+
+    % from diced import DicedStore
+    % store = DicedStore("gs://flyem-public-connectome")
+    
+This will launch a web server similar to the one we are publicly hosting on
+http://127.0.0.1:8000.  The data can then be retrieved through the DICED python
+interface (see below).
+
+DICED provides a numpy-friendly layer over the standard DVID HTTP API.  By limiting
+the datatypes and operations supported, simple image and label array operations can be
+handled easily.  If you need more power, you can also access data directly from the 
+DVID API ([help link](http://emdata.janelia.org/api/help)) using HTTP requests.
 
 ## Tutorial and Examples
 
