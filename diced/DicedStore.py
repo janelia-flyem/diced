@@ -74,8 +74,6 @@ max_log_age = 30   # days
         path = "DBPATH"
     '''
 
-    _FLYEMREPONAME = "flyem-public-connectome"
-
     def __init__(self, location, port=8000, rpcport=8001, permissionfile=None, appdir=None):
         """Init.
 
@@ -163,11 +161,6 @@ max_log_age = 30   # days
             local_env = os.environ.copy()
             if permissionfile is not None:
                 local_env["GOOGLE_APPLICATION_CREDENTIALS"] = permissionfile 
-            elif gbucket and location.split("gs://")[1] == self._FLYEMREPONAME:
-                # use default permission for flyem repo read permission
-                # (alternatively could publish the JSON permissions separately)
-                permpath = pkg_resources.resource_filename('diced', 'permjsons/flyemreposperm.json')
-                local_env["GOOGLE_APPLICATION_CREDENTIALS"] = permpath
                 
             # check dvid does not already exist
             dvidexists = False 

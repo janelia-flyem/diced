@@ -1,2 +1,1 @@
 recursive-include diced/dvid-console/lite-dist *
-include diced/permjsons/flyemreposperm.json
