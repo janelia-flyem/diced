@@ -207,6 +207,16 @@ class DicedRepo(object):
         return DicedArray(name, self.dicedstore, False, self.nodeconn, 
             dims, dtype, islabel3D)
 
+    def get_commit_log(self):
+        """Retrieve a list of commit log messages.
+        
+        Returns:
+            [(str, str] array of uuid, log messages
+        """
+
+        return self.loghistory 
+        
+
     def upload_filedata(self, dataname, data):
         """Upload file data to this repo version.
 
@@ -403,16 +413,25 @@ class DicedRepo(object):
            
         # load all ancestors
         ancestors = set()
+
+        # commit history uuid, commit note in order from oldest to newest
+        self.loghistory = []
         currnode = self.current_node
         while True:
             ancestors.add(str(currnode["UUID"]))
+            self.loghistory.append((str(currnode["UUID"]), currnode["Note"]))
             if len(currnode["Parents"]) > 0:
                 currnode = nodeids[str(currnode["Parents"][0])] 
             else:
                 break
+        self.loghistory.reverse()
 
         # load all instances
         self.activeinstances = {}
+        
+        if not self.locked:
+            tempuuid = self.loghistory[-1][0]
+            self.loghistory[-1] = (tempuuid, "(open node)")
 
         for instancename, val in self.repoinfo["DataInstances"].items():
             if str(val["Base"]["RepoUUID"]) in ancestors:

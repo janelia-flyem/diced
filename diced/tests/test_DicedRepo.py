@@ -50,7 +50,14 @@ class TestDicedRepo(unittest.TestCase):
         # open repo with uuid
         myrepov2= store.open_repo(uuid=uuidnew)
         self.assertEqual(myrepov2.get_current_version(), uuidnew)
-        
+
+        # check log history
+        logs = myrepov2.get_commit_log()
+        self.assertEqual(logs[0][0], uuid) 
+        self.assertEqual(logs[0][1], "now done") 
+        self.assertEqual(logs[1][0], uuidnew) 
+        self.assertEqual(logs[1][1], "(open node)")
+
         # change version
         myrepo.change_version(uuidnew)
         self.assertFalse(myrepo.locked)
