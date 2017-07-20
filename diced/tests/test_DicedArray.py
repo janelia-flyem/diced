@@ -6,63 +6,66 @@ import numpy
 from diced import DicedStore
 from diced import DicedException
 from diced import ArrayDtype
-from libdvid import DVIDNodeService
 
 class TestDicedArray(unittest.TestCase):
     def test_newdvidinstances(self):
         """Tests 16,32,64 raw data.
         """
-        
+               
         # create store object and repo
         dbdir = tempfile.mkdtemp()
         store = DicedStore(dbdir)
-        # my initial repo
-        store.create_repo("myrepo")
-        myrepo = store.open_repo("myrepo")
-
-        # test generic 16 bit
-        arr = myrepo.create_array("myarray16", ArrayDtype.uint16)
-        self.assertEqual(arr.get_numdims(), 3)
-        extents = arr.get_extents()
-        self.assertEqual(extents, (slice(0,0),slice(0,0),slice(0,0)))
-
-        # set and get data
-        data = numpy.zeros((400,200,100), numpy.uint16)
-        data[:] = 5
-        arr[1:401,2:202,3:103] = data
-        matchdata = arr[1:401,2:202,3:103]
-        matches = numpy.array_equal(data, matchdata)
-        self.assertTrue(matches)
-
-        # test generic 32 bit
-        arr = myrepo.create_array("myarray32", ArrayDtype.uint32)
-        self.assertEqual(arr.get_numdims(), 3)
-        extents = arr.get_extents()
-        self.assertEqual(extents, (slice(0,0),slice(0,0),slice(0,0)))
-
-        # set and get data
-        data = numpy.zeros((400,200,100), numpy.uint32)
-        data[:] = 5
-        arr[1:401,2:202,3:103] = data
-        matchdata = arr[1:401,2:202,3:103]
-        matches = numpy.array_equal(data, matchdata)
-        self.assertTrue(matches)
-
-        # test generic 64 bit array type
-        arr = myrepo.create_array("myarray64", ArrayDtype.uint64)
-        self.assertEqual(arr.get_numdims(), 3)
-        extents = arr.get_extents()
-        self.assertEqual(extents, (slice(0,0),slice(0,0),slice(0,0)))
-
-        # set and get data
-        data = numpy.zeros((400,200,100), numpy.uint64)
-        data[:] = 5
-        arr[1:401,2:202,3:103] = data
-        matchdata = arr[1:401,2:202,3:103]
-        matches = numpy.array_equal(data, matchdata)
-        self.assertTrue(matches)
-
-        store._shutdown_store()
+        
+        try:
+            # my initial repo
+            store.create_repo("myrepo")
+            myrepo = store.open_repo("myrepo")
+    
+            # test generic 16 bit
+            arr = myrepo.create_array("myarray16", ArrayDtype.uint16)
+            self.assertEqual(arr.get_numdims(), 3)
+            extents = arr.get_extents()
+            self.assertEqual(extents, (slice(0,0),slice(0,0),slice(0,0)))
+    
+            # set and get data
+            data = numpy.zeros((400,200,100), numpy.uint16)
+            data[:] = 5
+            arr[1:401,2:202,3:103] = data
+            matchdata = arr[1:401,2:202,3:103]
+            matches = numpy.array_equal(data, matchdata)
+            self.assertTrue(matches)
+    
+            # test generic 32 bit
+            arr = myrepo.create_array("myarray32", ArrayDtype.uint32)
+            self.assertEqual(arr.get_numdims(), 3)
+            extents = arr.get_extents()
+            self.assertEqual(extents, (slice(0,0),slice(0,0),slice(0,0)))
+    
+            # set and get data
+            data = numpy.zeros((400,200,100), numpy.uint32)
+            data[:] = 5
+            arr[1:401,2:202,3:103] = data
+            matchdata = arr[1:401,2:202,3:103]
+            matches = numpy.array_equal(data, matchdata)
+            self.assertTrue(matches)
+    
+            # test generic 64 bit array type
+            arr = myrepo.create_array("myarray64", ArrayDtype.uint64)
+            self.assertEqual(arr.get_numdims(), 3)
+            extents = arr.get_extents()
+            self.assertEqual(extents, (slice(0,0),slice(0,0),slice(0,0)))
+    
+            # set and get data
+            data = numpy.zeros((400,200,100), numpy.uint64)
+            data[:] = 5
+            arr[1:401,2:202,3:103] = data
+            matchdata = arr[1:401,2:202,3:103]
+            matches = numpy.array_equal(data, matchdata)
+            self.assertTrue(matches)
+        
+        finally:
+            store._shutdown_store()
+            shutil.rmtree(dbdir)
 
     def test_arraysmall(self):
         """Tests small get/puts.
@@ -72,50 +75,54 @@ class TestDicedArray(unittest.TestCase):
         # create store object and repo
         dbdir = tempfile.mkdtemp()
         store = DicedStore(dbdir)
-        # my initial repo
-        store.create_repo("myrepo")
-        myrepo = store.open_repo("myrepo")
 
-        # test 3D label array type
-        arr = myrepo.create_array("myarray", ArrayDtype.uint64, islabel3D=True)
-        self.assertEqual(arr.get_numdims(), 3)
-        extents = arr.get_extents()
-        self.assertEqual(extents, (slice(0,0),slice(0,0),slice(0,0)))
-
-        # set and get data
-        data = numpy.zeros((400,200,100), numpy.uint64)
-        data[:] = 5
-        arr[1:401,2:202,3:103] = data
-        matchdata = arr[1:401,2:202,3:103]
-        matches = numpy.array_equal(data, matchdata)
-        self.assertTrue(matches)
-
-        extents = arr.get_extents()
-        self.assertEqual(extents, (slice(0,448),slice(0,256),slice(0,128)))
-
-        # check negative coordinates
-        arr[-3,-1,4] = numpy.array([[[121]]])
-        val = arr[-3,-1,4] 
-        self.assertEqual(121, val)
-
-        extents = arr.get_extents()
-        self.assertEqual(extents, (slice(-64,448),slice(-64,256),slice(0,128)))
-
-        # check array access
-        arr[-3,-1,3:5] = numpy.array([[[121,122]]], numpy.uint64)
-        val = arr[-3,-1,3:5] 
-        matches = numpy.array_equal(numpy.array([121,122], numpy.uint64), val)
-        self.assertTrue(matches)
-
-        # check error cases
-        founderror = False
         try:
-            b = arr[0,5]
-        except DicedException:
-            founderror = True
-        self.assertTrue(founderror)
+            # my initial repo
+            store.create_repo("myrepo")
+            myrepo = store.open_repo("myrepo")
+    
+            # test 3D label array type
+            arr = myrepo.create_array("myarray", ArrayDtype.uint64, islabel3D=True)
+            self.assertEqual(arr.get_numdims(), 3)
+            extents = arr.get_extents()
+            self.assertEqual(extents, (slice(0,0),slice(0,0),slice(0,0)))
+    
+            # set and get data
+            data = numpy.zeros((400,200,100), numpy.uint64)
+            data[:] = 5
+            arr[1:401,2:202,3:103] = data
+            matchdata = arr[1:401,2:202,3:103]
+            matches = numpy.array_equal(data, matchdata)
+            self.assertTrue(matches)
+    
+            extents = arr.get_extents()
+            self.assertEqual(extents, (slice(0,448),slice(0,256),slice(0,128)))
+    
+            # check negative coordinates
+            arr[-3,-1,4] = numpy.array([[[121]]])
+            val = arr[-3,-1,4] 
+            self.assertEqual(121, val)
+    
+            extents = arr.get_extents()
+            self.assertEqual(extents, (slice(-64,448),slice(-64,256),slice(0,128)))
+    
+            # check array access
+            arr[-3,-1,3:5] = numpy.array([[[121,122]]], numpy.uint64)
+            val = arr[-3,-1,3:5] 
+            matches = numpy.array_equal(numpy.array([121,122], numpy.uint64), val)
+            self.assertTrue(matches)
+    
+            # check error cases
+            try:
+                _ = arr[0,5]
+            except DicedException:
+                pass
+            else:
+                assert False, "Expected an exception above, but it wasn't raised!"
 
-        store._shutdown_store()
+        finally:
+            store._shutdown_store()
+            shutil.rmtree(dbdir)
 
     def test_array1d2d(self):
         """Tests small get/puts on 1D/2D arrays.
@@ -126,62 +133,65 @@ class TestDicedArray(unittest.TestCase):
         # create store object and repo
         dbdir = tempfile.mkdtemp()
         store = DicedStore(dbdir)
-        # my initial repo
-        store.create_repo("myrepo")
-        myrepo = store.open_repo("myrepo")
 
-        # test generic 2D raw array type
-        arr = myrepo.create_array("myarray2d", ArrayDtype.uint8, dims=2)
-        self.assertEqual(arr.get_numdims(), 2)
-        extents = arr.get_extents()
-        self.assertEqual(extents, (slice(0,0),slice(0,0)))
-
-        # set and get data
-        data = numpy.zeros((200,100), numpy.uint8)
-        data[:] = 5
-        arr[2:202,3:103] = data
-        matchdata = arr[2:202,3:103]
-        matches = numpy.array_equal(data, matchdata)
-        self.assertTrue(matches)
-
-        extents = arr.get_extents()
-        self.assertEqual(extents, (slice(0,512),slice(0,512)))
-
-        # check error cases
-        founderror = False
         try:
-            b = arr[0]
-        except DicedException:
-            founderror = True
-        self.assertTrue(founderror)
+            # my initial repo
+            store.create_repo("myrepo")
+            myrepo = store.open_repo("myrepo")
+    
+            # test generic 2D raw array type
+            arr = myrepo.create_array("myarray2d", ArrayDtype.uint8, dims=2)
+            self.assertEqual(arr.get_numdims(), 2)
+            extents = arr.get_extents()
+            self.assertEqual(extents, (slice(0,0),slice(0,0)))
+    
+            # set and get data
+            data = numpy.zeros((200,100), numpy.uint8)
+            data[:] = 5
+            arr[2:202,3:103] = data
+            matchdata = arr[2:202,3:103]
+            matches = numpy.array_equal(data, matchdata)
+            self.assertTrue(matches)
+    
+            extents = arr.get_extents()
+            self.assertEqual(extents, (slice(0,512),slice(0,512)))
+    
+            # check error cases
+            try:
+                _ = arr[0]
+            except DicedException:
+                pass
+            else:
+                assert False, "Expected an exception above, but it wasn't raised!"
+    
+            # test generic 1D raw array type
+            arr = myrepo.create_array("myarray1d", ArrayDtype.uint8, dims=1)
+            self.assertEqual(arr.get_numdims(), 1)
+            extents = arr.get_extents()
+            self.assertEqual(extents, slice(0,0))
+    
+            # set and get data
+            data = numpy.zeros((100), numpy.uint8)
+            data[:] = 5
+            arr[3:103] = data
+            matchdata = arr[3:103]
+            matches = numpy.array_equal(data, matchdata)
+            self.assertTrue(matches)
+    
+            extents = arr.get_extents()
+            self.assertEqual(extents, slice(0,262144))
+    
+            # check error cases
+            try:
+                _ = arr[0:3, 0:3]
+            except DicedException:
+                pass
+            else:
+                assert False, "Expected an exception above, but it wasn't raised!"
 
-        # test generic 1D raw array type
-        arr = myrepo.create_array("myarray1d", ArrayDtype.uint8, dims=1)
-        self.assertEqual(arr.get_numdims(), 1)
-        extents = arr.get_extents()
-        self.assertEqual(extents, slice(0,0))
-
-        # set and get data
-        data = numpy.zeros((100), numpy.uint8)
-        data[:] = 5
-        arr[3:103] = data
-        matchdata = arr[3:103]
-        matches = numpy.array_equal(data, matchdata)
-        self.assertTrue(matches)
-
-        extents = arr.get_extents()
-        self.assertEqual(extents, slice(0,262144))
-
-        # check error cases
-        founderror = False
-        try:
-            b = arr[0:3, 0:3]
-        except DicedException:
-            founderror = True
-        self.assertTrue(founderror)
-
-
-        store._shutdown_store()
+        finally:
+            store._shutdown_store()
+            shutil.rmtree(dbdir)
 
 
     def test_arraylarge(self):
@@ -193,35 +203,39 @@ class TestDicedArray(unittest.TestCase):
         # create store object and repo
         dbdir = tempfile.mkdtemp()
         store = DicedStore(dbdir)
-        # my initial repo
-        store.create_repo("myrepo")
-        myrepo = store.open_repo("myrepo")
 
-        # test generic 3D raw array type
-        arr = myrepo.create_array("myarray", ArrayDtype.uint8)
+        try:
+            # my initial repo
+            store.create_repo("myrepo")
+            myrepo = store.open_repo("myrepo")
+    
+            # test generic 3D raw array type
+            arr = myrepo.create_array("myarray", ArrayDtype.uint8)
+    
+            # ?! test negative coord
+    
+            _b = ArrayDtype.uint8
+    
+            # set and get data
+            #data = numpy.random.randint(1031, size=(1400,1200,1000)).astype(numpy.uint8)
+            data = numpy.zeros((1400,1200,1000), numpy.uint8)
+            data[:] = 3
+    
+            arr[1:1401,2:1202,3:1003] = data
+            
+            matchdata = arr[1:1401,2:1202,3:1003]
+            matches = numpy.array_equal(data, matchdata)
+            self.assertTrue(matches)
+            
+            matchzero = arr[1401,1202,1003]
+            self.assertEqual(0, matchzero)
+    
+            extents = arr.get_extents()
+            self.assertEqual(extents, (slice(0,1408),slice(0,1216),slice(0,1024)))
 
-        # ?! test negative coord
-
-        b = ArrayDtype.uint8
-
-        # set and get data
-        #data = numpy.random.randint(1031, size=(1400,1200,1000)).astype(numpy.uint8)
-        data = numpy.zeros((1400,1200,1000), numpy.uint8)
-        data[:] = 3
-
-        arr[1:1401,2:1202,3:1003] = data
-        
-        matchdata = arr[1:1401,2:1202,3:1003]
-        matches = numpy.array_equal(data, matchdata)
-        self.assertTrue(matches)
-        
-        matchzero = arr[1401,1202,1003]
-        self.assertEqual(0, matchzero)
-
-        extents = arr.get_extents()
-        self.assertEqual(extents, (slice(0,1408),slice(0,1216),slice(0,1024)))
-
-        store._shutdown_store()
+        finally:
+            store._shutdown_store()
+            shutil.rmtree(dbdir)
 
 if __name__ == "main":
     unittest.main()
