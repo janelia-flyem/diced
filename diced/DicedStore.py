@@ -112,6 +112,7 @@ max_log_age = 30   # days
         self._dvidproc = None
         self._server = None
         self.rpcport = rpcport
+        self.port = port
 
         # if gs or local launch DVID
         gbucket = location.startswith("gs://")
