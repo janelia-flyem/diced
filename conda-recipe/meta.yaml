@@ -17,17 +17,19 @@ build:
   
 requirements:
   build:
-    - python 2.7*
+    - python >=2.7
+    - python {{PY_VER}}*
     - setuptools
     - libdvid-cpp >=0.2.post59
     - numpy
+
   run:
-    - python 2.7*
+    - python {{PY_VER}}*
     - numpy
     - dvid
     - libdvid-cpp >=0.2.post59
     - requests
-    - enum34
+    - enum34 # [py2k]
     
 test:
   imports:

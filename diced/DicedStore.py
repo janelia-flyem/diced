@@ -4,6 +4,7 @@ In addition to connecting to the DICED store, it also provides
 top-level exception handling for the package.
 """
 
+from __future__ import absolute_import
 from libdvid import DVIDNodeService, DVIDServerService, ConnectionMethod, DVIDConnection
 from libdvid._dvid_python import DVIDException
 import subprocess
@@ -11,8 +12,8 @@ import os
 import tempfile
 import json
 
-from DicedRepo import DicedRepo
-from DicedException import DicedException
+from .DicedRepo import DicedRepo
+from .DicedException import DicedException
 
 
 class DicedStore(object):
@@ -155,7 +156,7 @@ max_log_age = 30   # days
             tomlfile = tempfile.NamedTemporaryFile(dir=appdir + "/dvid",
                     suffix='.toml', delete=False)
             tomllocation = tomlfile.name
-            tomlfile.write(tomldata)
+            tomlfile.write(tomldata.encode('utf-8'))
             tomlfile.close()
 
             # copy environment and set new variable if permissionfile
@@ -203,7 +204,7 @@ max_log_age = 30   # days
         # check that dvid server is accepting connections
         try:
             DVIDServerService(self._server)
-        except DVIDException, err:
+        except DVIDException as err:
             raise DicedException("DVID connection failed")
 
 
@@ -259,7 +260,7 @@ max_log_age = 30   # days
                     raise DicedException("Repo name already exists")
             service = DVIDServerService(self._server)
             uuid = service.create_new_repo(name, description)
-        except DVIDException, err:
+        except DVIDException as err:
             raise DicedException("Failed to create repo")
 
     def delete_repo(self, name):
@@ -299,12 +300,12 @@ max_log_age = 30   # days
         try:
             conn = DVIDConnection(self._server) 
             code, data, errmsg = conn.make_request("/repos/info", ConnectionMethod.GET)
-        except DVIDException, err:
+        except DVIDException as err:
             raise DicedException("Failed to access /repos/info on DVID")
       
         jdata = json.loads(data) 
         res = []
-        for key, val in jdata.items():
+        for _key, val in jdata.items():
             res.append((str(val["Alias"]), str(val["Root"])))
 
         return res

@@ -82,12 +82,12 @@ class TestDicedRepo(unittest.TestCase):
         # create file
         myrepo.upload_filedata("hello.txt", "world text")
         res = myrepo.download_filedata("hello.txt")
-        self.assertEqual(res, "world text")
+        self.assertEqual(res, b"world text")
         
         # overwrite
         myrepo.upload_filedata("hello.txt", "world text2")
         res = myrepo.download_filedata("hello.txt")
-        self.assertEqual(res, "world text2")
+        self.assertEqual(res, b"world text2")
 
         # new file
         myrepo.upload_filedata("world.txt", "foobar")
@@ -125,7 +125,7 @@ class TestDicedRepo(unittest.TestCase):
         # modify data in child node
         myrepo.upload_filedata("world.txt", "newdata")
         res = myrepo.download_filedata("world.txt")
-        self.assertEqual(res, "newdata")
+        self.assertEqual(res, b"newdata")
       
         myrepo.delete_file("hello.txt")
         allfiles = myrepo.list_files() 
@@ -135,7 +135,7 @@ class TestDicedRepo(unittest.TestCase):
         # text not overwritten in root
         myrepo.change_version(rootuuid)
         res = myrepo.download_filedata("world.txt")
-        self.assertEqual(res, "foobar")
+        self.assertEqual(res, b"foobar")
 
         # file shouldn't be deleted in root
         allfiles = myrepo.list_files() 
@@ -223,7 +223,7 @@ class TestDicedRepo(unittest.TestCase):
 
          
         # test hidden exclusion add
-        ns.put(".meta", "restrictions", json.dumps(["myarray2d"]))
+        ns.put(".meta", "restrictions", json.dumps(["myarray2d"]).encode('utf-8'))
         myrepo.change_version(myrepo.get_current_version())
         allinstances = myrepo.list_instances()
         self.assertEqual(len(allinstances), 2)

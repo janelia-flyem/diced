@@ -1,9 +1,10 @@
 """Functionality to store and retrieve data into Diced arrays.
 """
 
+from __future__ import absolute_import
 import numpy as np
 from enum import Enum
-from DicedException import DicedException
+from .DicedException import DicedException
 
 class ArrayDtype(Enum):
     """Defines datatypes supported.
@@ -205,11 +206,11 @@ class DicedArray(object):
      
             while zincr*yincr*xincr > self.MAX_REQ_SIZE:
                 if zincr > yincr and zincr > xincr:
-                    zincr = zincr/2 + zincr % 2
+                    zincr = zincr//2 + zincr % 2
                 elif yincr > zincr and yincr > xincr:
-                    yincr = yincr/2 + yincr % 2
+                    yincr = yincr//2 + yincr % 2
                 else:
-                    xincr = xincr/2 + xincr % 2
+                    xincr = xincr//2 + xincr % 2
 
             for ziter in range(0, zsize, zincr):
                 for yiter in range(0, ysize, yincr):
@@ -391,11 +392,11 @@ class DicedArray(object):
        
             while zincr*yincr*xincr > self.MAX_REQ_SIZE:
                 if zincr > yincr and zincr > xincr:
-                    zincr = zincr/2 + zincr % 2
+                    zincr = zincr//2 + zincr % 2
                 elif yincr > zincr and yincr > xincr:
-                    yincr = yincr/2 + yincr % 2
+                    yincr = yincr//2 + yincr % 2
                 else:
-                    xincr = xincr/2 + xincr % 2
+                    xincr = xincr//2 + xincr % 2
 
             for ziter in range(0, zsize, zincr):
                 for yiter in range(0, ysize, yincr):

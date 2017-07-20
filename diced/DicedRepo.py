@@ -1,15 +1,19 @@
 """Functonality to access a specific version of a repository.
 """
 
-import numpy as np
+from __future__ import absolute_import
+import sys
 import json
 import subprocess
 
 from libdvid import DVIDNodeService, ConnectionMethod, DVIDConnection
 from libdvid._dvid_python import DVIDException
-from DicedException import DicedException
-from DicedArray import DicedArray
-from DicedArray import ArrayDtype
+from .DicedException import DicedException
+from .DicedArray import DicedArray
+from .DicedArray import ArrayDtype
+
+if sys.version_info.major >= 3:
+    unicode = str
 
 class DicedRepo(object):
     """Provides access to a version of the specified repo.
@@ -196,13 +200,13 @@ class DicedRepo(object):
         if not islabel3D and lossycompression:
             data["Compression"] = "jpeg"
 
-        self.rawconn.make_request(endpoint, ConnectionMethod.POST, json.dumps(data))
+        self.rawconn.make_request(endpoint, ConnectionMethod.POST, json.dumps(data).encode('utf-8'))
 
         # update current node meta 
         self._init_version(self.uuid)
         
         # use '.meta' keyvalue to store array size (since not internal to DVID yet)
-        self.nodeconn.put(self.MetaLocation, self.InstanceMetaPrefix+name+":"+str(self.repoinfo["DataInstances"][name]["Base"]["DataUUID"]), json.dumps({"numdims": dims}))
+        self.nodeconn.put(self.MetaLocation, self.InstanceMetaPrefix+name+":"+str(self.repoinfo["DataInstances"][name]["Base"]["DataUUID"]), json.dumps({"numdims": dims}).encode('utf-8'))
 
         return DicedArray(name, self.dicedstore, False, self.nodeconn, 
             dims, dtype, islabel3D)
@@ -230,6 +234,8 @@ class DicedRepo(object):
 
         if self.locked:
             raise DicedException("Node already locked")
+        if isinstance(data, unicode):
+            data = data.encode('utf-8')
         self.nodeconn.put(self.FilesLocation, dataname, data)
 
 
@@ -284,8 +290,9 @@ class DicedRepo(object):
             List of strings for file names
         """
 
-        return json.loads(self.nodeconn.custom_request("/" + self.FilesLocation + "/keys/0/z", "",
-            ConnectionMethod.GET))
+        json_text = self.nodeconn.custom_request("/" + self.FilesLocation + "/keys/0/z", b"",
+            ConnectionMethod.GET)
+        return json.loads(json_text)
 
     def create_branch(self, message):
         """Create a new branch from this locked node.
@@ -303,8 +310,10 @@ class DicedRepo(object):
         if not self.locked:
             raise DicedException("Must lock node before branching")
         
-        res = json.loads(self.nodeconn.custom_request("/branch",
-                json.dumps({"note": message}), ConnectionMethod.POST))
+        res = self.nodeconn.custom_request("/branch",
+                                           json.dumps({"note": message}).encode('utf-8'),
+                                           ConnectionMethod.POST)
+        res = json.loads(res)
 
         #  add new uuid (no need to reinit everything)
         self.alluuids.add(str(res["child"]))
@@ -329,7 +338,8 @@ class DicedRepo(object):
             raise DicedException("Node already locked")
         
         self.nodeconn.custom_request("/commit",
-                json.dumps({"note": message}), ConnectionMethod.POST)
+                                     json.dumps({"note": message}).encode('utf-8'),
+                                     ConnectionMethod.POST)
 
         # no need to reinit everything
         self.locked = True
@@ -350,7 +360,7 @@ class DicedRepo(object):
             raise DicedException("Node already locked")
 
         self.nodeconn.custom_request("/" + self.FilesLocation + "/key/" + filename, 
-                "", ConnectionMethod.DELETE)
+                b"", ConnectionMethod.DELETE)
         
     def delete_array(self, dataname):
         """Delete array from repo (not just version!) -- this cannot be undone!
