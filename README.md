@@ -1,7 +1,7 @@
 # DICED (Diced Is Cloud-Enabled DVID) [![Picture](https://raw.github.com/janelia-flyem/janelia-flyem.github.com/master/images/HHMI_Janelia_Color_Alternate_180x40.png)](http://www.janelia.org)
 
-DICED is a wrapper around the [DVID](https://github.com/janelia-flyem/dvid.git) library that exposes
-a simplified API only for nD image and file storage that can efficiently be accessed from cloud storage.
+DICED is a wrapper around the [DVID](https://github.com/janelia-flyem/dvid.git) library that conveniently exposes
+a subset of the API for nD image and file storage, which can efficiently be accessed from cloud storage.
 Since DICED is a wrapper for DVID, the main DVID functionality can still be access
 through its HTTP API.
 
