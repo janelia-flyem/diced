@@ -1,5 +1,12 @@
 # DICED (Diced Is Cloud-Enabled DVID) [![Picture](https://raw.github.com/janelia-flyem/janelia-flyem.github.com/master/images/HHMI_Janelia_Color_Alternate_180x40.png)](http://www.janelia.org)
 
+DICED is a wrapper around the [DVID](https://github.com/janelia-flyem/dvid.git) library that explicitly exposes
+only the API for nD image and file storage that can efficiently be accessed from cloud storage.
+Since DICED is a wrapper for DVID, the main DVID functionality can still be access
+through its HTTP API.
+
+## Overview
+
 This package enables storage and access of massive data arrays both locally and
 on the cloud.  It incorporates ideas from github, like versioning and notions
 of different repositories of data, to allow effective management of large array
@@ -13,7 +20,10 @@ of arbitrarily large (up to signed 32-bit integer) for each dimension
 and exploits modern large-scale distributed storage on the cloud.
 In this way, it is possible to use DICED for massive, high-throughput reads,
 without requiring an expensive disk solution to improve throughput
-to a single hdf file. 
+to a single hdf file.
+
+This package currently allows data to be stored into Google Cloud Storage
+or on a local filesystem.
 
 ## Installation
 
