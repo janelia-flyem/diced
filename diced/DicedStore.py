@@ -352,5 +352,5 @@ max_log_age = 30   # days
                 raise DicedException("uuid does not exist")
         elif name is not None:
             repoid = self.get_repouuid(name)
-            return DicedRepo(self._server, repoid, self)
+            return DicedRepo(self._server, repoid, self, readonly)
 
