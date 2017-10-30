@@ -327,7 +327,7 @@ max_log_age = 30   # days
                 return repoid
         raise DicedException("repo name does not exist")
 
-    def open_repo(self, name=None, uuid=None):
+    def open_repo(self, name=None, uuid=None, readonly=False):
         """Open repository of the specified name (or by unique identifier).
 
         If only the name is specified, the root node is taken by default.
@@ -346,7 +346,7 @@ max_log_age = 30   # days
         if uuid is not None:
             try:
                 ns = DVIDNodeService(self._server, uuid)
-                return DicedRepo(self._server, uuid, self)
+                return DicedRepo(self._server, uuid, self, readonly)
             except DVIDException:
                 # repo does not exist
                 raise DicedException("uuid does not exist")
