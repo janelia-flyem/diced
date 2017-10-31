@@ -55,7 +55,7 @@ class DicedRepo(object):
     RestrictionName = "restrictions"
     InstanceMetaPrefix = "instance:"
 
-    def __init__(self, server, uuid, dicedstore):
+    def __init__(self, server, uuid, dicedstore, readonly=False):
         self.server = server
         
         # create connection object to DVID
@@ -88,10 +88,14 @@ class DicedRepo(object):
         self._init_version(uuid)
 
         # create meta types if not currently available
-        if self.MetaLocation not in self.activeinstances:
-            self.nodeconn.create_keyvalue(self.MetaLocation)
-        if self.FilesLocation not in self.activeinstances:
-            self.nodeconn.create_keyvalue(self.FilesLocation)
+        # This operation is not available if the DVID server is running in
+        # readonly mode, but most of this library will still work if it is.
+        # Supplying readonly=True in the constructor will bypass this initialisation.
+        if not readonly:
+            if self.MetaLocation not in self.activeinstances:
+                self.nodeconn.create_keyvalue(self.MetaLocation)
+            if self.FilesLocation not in self.activeinstances:
+                self.nodeconn.create_keyvalue(self.FilesLocation)
 
     def change_version(self, uuid):
         """Change the current node version.
