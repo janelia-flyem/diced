@@ -46,11 +46,11 @@ The [Miniconda](http://conda.pydata.org/miniconda.html) tool first needs to inst
 
 # LINUX:
 wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
-bash Miniconda-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
 
 # MAC:
 wget https://repo.continuum.io/miniconda/Miniconda-latest-MacOSX-x86_64.sh
-bash Miniconda-latest-MacOSX-x86_64.sh
+bash Miniconda3-latest-MacOSX-x86_64.sh
 
 # Activate conda
 CONDA_ROOT=`conda info --root`
@@ -60,8 +60,10 @@ Once conda is in your system path, call the following to install libdvid-cpp:
 
     % conda create -n <NAME> -c flyem-forge diced
 
-Conda allows builder to create multiple environments.  To use the python
-library, set your PATH to the location of PREFIX/envs/< NAME >/bin. 
+That creates a new environment and installs `diced` (and its dependencies) to it.
+Activate your new environment with:
+
+    % source activate <NAME>
 
 ### Developers
 
