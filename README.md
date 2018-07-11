@@ -58,7 +58,7 @@ source ${CONDA_ROOT}/bin/activate root
 ```
 Once conda is in your system path, call the following to install libdvid-cpp:
 
-    % conda create -n <NAME> -c flyem diced
+    % conda create -n <NAME> -c flyem-forge diced
 
 Conda allows builder to create multiple environments.  To use the python
 library, set your PATH to the location of PREFIX/envs/< NAME >/bin. 
